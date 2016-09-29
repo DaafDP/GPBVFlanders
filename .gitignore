@@ -2,3 +2,13 @@
 .Rhistory
 .RData
 .Rproj
+*.csv
+*.dbf
+*.Rproj
+*.prj
+*.qpj
+*.shp
+*.shx
+*.dbf
+*.xlsx
+*.out
