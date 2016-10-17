@@ -72,36 +72,6 @@ Scores <- t(Scores)
 Sources$TIS <- Scores[,1]
 Sources$SS <- Scores[,2]
 
-Deposition <- 
-        apply(Sources, 1, function(x){
-                print(x[1])
-                DepositionTable <- as.data.frame(matrix(ncol=5, nrow=nrow(Receptor)))
-                colnames(DepositionTable) <- c("ID", "X", "Y", "DD", "ND")
-                DepositionTable$ID <- Receptor[,1]
-                DepositionTable$X <- Receptor$X - as.numeric(x[2])
-                DepositionTable$Y <- Receptor$Y - as.numeric(x[3])
-                #coordinaten afronden op 100 (aligneren met hoedje)
-                DepositionTable$X <- round((DepositionTable$X/100), digits=0) * 100
-                DepositionTable$Y <- round((DepositionTable$Y/100), digits=0) * 100
-                test <- apply(DepositionTable[,2:3], 1, function(y){
-                        #print(y[2])
-                        #print(y[3])
-                        if (y[2] > 20000 | y[2] <= -19900) {
-                                DD <- 0
-                                ND <- 0
-                        } else if (y[1] > 20000 | y[1] <= -19900) {
-                                DD <- 0
-                                ND <- 0
-                        } else {
-                                
-                                DD <- hoedjeDD[as.character(y[2]), as.character(y[1])]
-                                ND <- hoedjeND[as.character(y[2]), as.character(y[1])]
-                        }
-                        c(DD,ND)
-                })
-                #test <- data.frame(matrix(unlist(test), nrow=nrow(DepositionTable),byrow=T))
-        })
-
 Deposition <- as.data.frame(Deposition)
 colnames(Deposition) <- Sources[,1]
 Deposition$j <- rep(paste("r", c(1:nrow(Receptor)), sep=""), each=2)
