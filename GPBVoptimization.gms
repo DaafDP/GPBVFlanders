@@ -1,7 +1,6 @@
-*Regional Model version 12
-*EMEP ammonia emissions
-*Hoedje dataset (IFDM, VITO, 20*20 km², resolutie 100 m)
-*Meteo 2011
+*Dataset GPBV farms Flanders (coordinates, permitted animals)
+*EMAV ammonia stable emissions
+*Hoedje dataset (IFDM, VITO, 20*20 kmÂ², resolutie 100 m, meteo 2012 Luchtbal)
 *Deposition velocities VLOPS
 
 
@@ -12,23 +11,15 @@ $call GDXXRW dataGPBVFlanders.xlsx   index=index
 ********************************************************************************
 
 Sets
-*sAnimalCategory
-*sEmissionStage
+sAnimalCategory
 sFarm
-*sManureType
 sCoordinates
-sReceptor
-sHabitats
+sImpactscores
 ;
 
-$gdxin dataGPBVHouthulst.gdx
-$load sFarm, sCoordinates, sReceptor, sHabitats
+$gdxin dataGPBVFlanders.gdx
+$load sFarm, sCoordinates, sImpactScores
 $gdxin
-;
-
-Set
-*sSubsetStage(sEmissionStage) /Yard, Building, Grazing/
-sDep /DD, ND/
 ;
 
 ********************************************************************************
@@ -36,37 +27,16 @@ sDep /DD, ND/
 ********************************************************************************
 
 Parameters
-*pManureType(sAnimalCategory, sManureType, sFarm) Proportion of manure handled as liquid slurry or solid
-*pNex(sAnimalCategory) Annual N excretion of animal (table 3.7)
-*pTimeSpent(sSubsetStage, sAnimalCategory) Proportion of time spent on certain stage (possibly variable)
-*pTAN(sAnimalCategory) Proportion of TAN in total N excretion  (table 3.7)
-*pAmmoniaEF(sAnimalCategory, sManureType, sEmissionStage) Default emission factors ammonia (table 3.7)
-*pStrawAnimal(sAnimalCategory) (table 3.5)
-*pNinStraw(sAnimalCategory) (table 3.5)
-*pStored(sManureType) Proportion of manure stored before application (possibly variable)
-*pLaughingGasEF(sAnimalCategory, sManureType) Default emission factor laughing gas (table 3.6)
-*pNitrogenOxideEF(sManureType) Default emission factor nitrogen oxide (table 3.8)
-*pNitrogenGasEF(sManureType) Default emission factor nitrogen gas (table 3.8)
-*pAnimalCategory(sAnimalCategory, sFarm) Type of animals per farm
-*pEmissionType(sAnimalCategory, sManureType, sEmissionStage) Allowed emission stage depending on animal type and manure type
-*pYard(sAnimalCategory) Excretion on Yard
-*pStrawMass(sAnimalCategory) Straw added per animal
 pFarmCoord(sFarm, sCoordinates) X and Y Lambert Coordinates Sources
-pReceptorCoord(sReceptor, sCoordinates) X and Y Lambert Coordinates Receptor
-pHabitats(sReceptor, sHabitats) Habitat characteristics (CL - habitat type - Vd )
+pFarmAnimals(sFarm, sAnimalCategory)
+pEmissionFactors(sAnimalCategory)
+pImpactScores(sFarm, sImpactScores) TIS en SS for emission strength 5000 kg NH3 per year
 ;
 
 $gdxin dataGPBVFlanders.gdx
-$load pFarmCoord, pReceptorCoord, pHabitats
+$load pFarmCoord, pFarmAnimals(sFarm, sAnimalCategory), pEmissionFactors(sAnimalCategory)
 $gdxin
 
-$ontext
-Scalars
-pFimm Fraction of TAN immobilized in organic matter when manure is managed as solid /0.0067/
-pFmin Fraction of organic N mineralised to TAN before gaseous emissions /0.1/
-;
-
-$offtext
 
 ********************************************************************************
 ********************************R hoedje****************************************
