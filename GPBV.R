@@ -13,6 +13,7 @@ setwd("C:/Users/ddpue/Documents/GPBV Flanders/R/")
 Receptor <- read.delim("C:/Users/ddpue/Documents/GPBV Flanders/R/GPBVFlanders/Receptor.txt")
 Sources <- read.delim("C:/Users/ddpue/Documents/GPBV Flanders/R/GPBVFlanders/Sources.txt")
 Hoedje <- read.csv("~/Regional Model/SpatialOptimization  GPBV Flanders/dataHoedje.csv")
+Permits <- read.delim("C:/Users/ddpue/Documents/GPBV Flanders/R/GPBVFlanders/EnvironmentalPermits.txt")
 
 #Vectoren met coordinaten hoedje
 X <- c(-199:200) * 100
@@ -71,26 +72,66 @@ Scores <- t(Scores)
 
 Sources$TIS <- Scores[,1]
 Sources$SS <- Scores[,2]
+colnames(Sources) <- c("ID", "X", "Y", "TIS", "SS")
 
-Deposition <- as.data.frame(Deposition)
-colnames(Deposition) <- Sources[,1]
-Deposition$j <- rep(paste("r", c(1:nrow(Receptor)), sep=""), each=2)
-Deposition$k <- rep(c("DD", "ND"))
+#Bundle all data in GDX format
+FarmCoordinates <- Sources[,1:3]
+FarmCoordinates <- melt(FarmCoordinates)
+colnames(FarmCoordinates) <- c("i", "j", "value")
+FarmCoordinates$i <- as.factor(FarmCoordinates$i)
+FarmCoordinates$j <- as.factor(FarmCoordinates$j)
+attr(FarmCoordinates, "symName") <- "pFarmCoord"
+attr(FarmCoordinates, "ts") <- "X and Y Lambert Coordinates Sources"
+attr(FarmCoordinates, "domains") <- c("sFarm", "sCoordinates")
 
-#Reshape data frame for export to gdx/GAMS
-Deposition <- melt(Deposition)
-Deposition <- Deposition[c("variable", "j", "k", "value")]
-colnames(Deposition) <- c("i", "j", "k", "value")
-Deposition$j <- as.factor(Deposition$j)
-Deposition$k <- as.factor(Deposition$k)
-attr(Deposition, "symName") <- "pDeposition"
-attr(Deposition, "ts") <- "Deposition for 5000 kg NH3/yr hoedje"
-attr(Deposition, "domains") <- c("sFarm", "sReceptor", "sDep")
-str(Deposition)
+ImpactScores <- Sources[c("ID", "TIS", "SS")]
+ImpactScores <- melt(ImpactScores)
+colnames(ImpactScores) <- c("i", "j", "value")
+ImpactScores$i <- as.factor(ImpactScores$i)
+ImpactScores$j <- as.factor(ImpactScores$j)
+attr(ImpactScores, "symName") <- "pImpactScores"
+attr(ImpactScores, "ts") <- "TIS and SS for emission strength 5000 kg NH3 per year"
+attr(ImpactScores, "domains") <- c("sFarm", "sImpactscores")
 
-#Write Deposition into GDX-file
-wgdx.lst("Deposition.gdx", Deposition)
+AnimalCategory <- data.frame(as.factor(c("Broilers", "LayingHens", "Turkeys", "Cows0to1", "Cows1to2", 
+                    "AdultCows", "FatteningPigs", "Sows", "Piglets", "Horses", "FatteningCalves")))
+colnames(AnimalCategory) <- "i"
+attr(AnimalCategory, "symName") <- "sAnimalCategory"
+attr(AnimalCategory, "ts") <- "max permitted animals"
+
+FarmAnimals <- Permits[c("ID", "Braadkippen", "Leghennen", "Kalkoenen", "Runderen", "Mestvarkens", "Zeugen",
+                         "Biggen", "Paarden", "Mestkalveren")]
+colnames(FarmAnimals) <- c("ID", "Broilers", "LayingHens", "Turkeys",  "Cows", "FatteningPigs", "Sows",
+                           "Piglets", "Horses", "FatteningCalves")
+FarmAnimals$AdultCows <- round(0.60 * FarmAnimals$Cows)
+FarmAnimals$Cows0to1 <- round(0.20 * FarmAnimals$Cows)
+FarmAnimals$Cows1to2 <- round(0.20 * FarmAnimals$Cows)
+FarmAnimals$Cows <- NULL
+FarmAnimals <- melt(FarmAnimals)
+colnames(FarmAnimals) <- c("i", "j", "value")
+FarmAnimals$i <- as.factor(FarmAnimals$i)
+FarmAnimals$j <- as.factor(FarmAnimals$j)
+attr(FarmAnimals, "symName") <- "pFarmAnimals"
+attr(FarmAnimals, "ts") <- "max permitted animals per farm"
+attr(FarmAnimals, "domains") <- c("sFarm", "sAnimalCategory")
+
+PermitYear <- Permits[c("ID", "Jaar")]
+colnames(PermitYear) <- c("i", "value")
+PermitYear$i <- as.factor(PermitYear$i)
+attr(PermitYear, "symName") <- "pPermitYear"
+attr(PermitYear, "ts") <- "Year in which permit was granted (start of 20 years permit)"
+attr(PermitYear, "domains") <- c("sFarm")
+
+EmissionFactors <- data.frame(AnimalCategory)
+EmissionFactors$value <- c(0.02, 0.015, 0.33, 3.705, 4.18, 9.12, 1.2, 2.2, 0.2, 5, 2.38)
+EmissionFactors$i <- as.factor(EmissionFactors$i)
+attr(EmissionFactors, "symName") <- "pEmissionFactor"
+attr(EmissionFactors, "ts") <- "EMAV emission factors for BBT AEAS (kg NH3 per year per place)"
+attr(EmissionFactors, "domains") <- "sAnimalCategory"
+ 
+wgdx.lst("C:/Users/ddpue/Documents/GPBV Flanders/GAMS/GPBV.gdx", FarmCoordinates, ImpactScores, 
+         AnimalCategory, FarmAnimals, PermitYear, EmissionFactors)
 
 #Quit R
-#q("yes)
+q("yes)
 
