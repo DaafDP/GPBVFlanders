@@ -8,4 +8,5 @@ Subselection <- subset(BEL2012, BEL2012$A34 %in% TFs)
 
 #Only Flanders
 Subselection <- subset(Subselection, Subselection$A1 == 341)
-                   
+table(Subselection$A34) #Frequency table according to Farm Type                   
+table(Subselection$A36) #Frequency table according to economic size
