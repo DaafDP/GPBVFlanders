@@ -1,0 +1,5 @@
+BEL2012 <- read.csv("S:/team_jb/staff/ddpue/FADN/BEL2012.csv")
+BEL2012[,c("A28", "D30CV")]
+BEL2012$SE251
+BEL2012$SE605
+BEL2012$E51DR
