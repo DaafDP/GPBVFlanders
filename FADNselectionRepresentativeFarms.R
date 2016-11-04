@@ -11,104 +11,6 @@ FarmAnimals$Cows0to1 <- round(0.20 * FarmAnimals$Cows)
 FarmAnimals$Cows1to2 <- round(0.20 * FarmAnimals$Cows)
 FarmAnimals$Cows <- NULL
 
-#StandardOutputperAnimalType
-#Numbers for Flanders, 2010
-SOAnimals <-  as.data.frame(cbind(c("Broilers", "LayingHens", "Turkeys", "FatteningPigs", "Sows", "Piglets", "Horses", "FatteningCalves",
-                                    "AdultCows", "Cows0to1", "Cows1to2"), rep(0,11))) 
-colnames(SOAnimals) <- c("AnimalCategory", "SO")
-SOAnimals$AnimalCategory <- as.character(SOAnimals$AnimalCategory)
-SOAnimals$SO <- as.integer(SOAnimals$SO)
-SOAnimals[1,2] <- 1087/100 #Poultry - broilers
-SOAnimals[2,2] <- 1496/100 #Laying Hens
-SOAnimals[3,2] <- 1903/100 #Turkeys
-SOAnimals[4,2] <- 212 #Pigs - others
-SOAnimals[5,2] <- 916 #Pigs - breeding sows over 50 kg
-SOAnimals[6,2] <- 91 #Piglets under 20 kg
-SOAnimals[7,2] <- 45 #Equidae 
-SOAnimals[8,2] <- 463 #Bovine under one year old - total
-SOAnimals[9,2] <- 2411 #Dairy Cows
-SOAnimals[10,2] <- 463  #Bovine under one year old - total
-SOAnimals[11,2] <- 432  #Bovine 1-2 yrs female
-
-
-#Calculate SO and assign economic size to GPBV farms
-FarmTypes <- apply(FarmAnimals, 1, function(x){
-        SO <- (as.integer(x[2:12]) * SOAnimals[,2])
-        #Assign Total Standard Output
-        TotalSO <- sum(SO)
-        #Assign EconomicSize
-        EconomicSize <- 0
-        if (TotalSO >= 3000000) {
-                EconomicSize <- 14
-        }
-        else if (TotalSO > 1500000 ) {
-                EconomicSize <- 13
-        }
-        else if (TotalSO > 1000000) {
-                EconomicSize <- 12
-        }
-        else if (TotalSO > 750000) {
-                EconomicSize <- 11
-        }
-        else if (TotalSO > 500000) {
-                EconomicSize <- 10
-        }
-        else if (TotalSO > 250000) {
-                EconomicSize <- 9
-        }
-        #Assign Farm Type (TF)
-        if ((sum(SO[9:11])/TotalSO) > (2/3)) { #Specialist Dairying
-                TF <- 450
-        }
-        else if ((SO[5]/TotalSO) > (2/3)) { #Specialist pig rearing
-                TF <- 511
-        }
-        else if (((SO[4]+SO[6])/TotalSO) > (2/3)) { #Specialist pig fattening
-                TF <- 512
-        }
-        else if ((sum(SO[4:5])/TotalSO) > (2/3)) { #Pig rearing and fattening combined
-                TF <- 513
-        }
-        else if ((sum(SO[4:5])/TotalSO) > (2/3)) { #Pig rearing and fattening combined
-                TF <- 513
-        }
-        else if ((SO[2]/TotalSO) > (2/3)) { #Specialist layers
-                TF <- 521
-        }
-        else if (((SO[1]+SO[3])/TotalSO) > (2/3)) { #Specialist poultry-meat
-                TF <- 522
-        }
-        else if ((sum(SO[1:3])/TotalSO) > (2/3)) { #Layers  and poultry-meat combined
-                TF <- 523
-        }
-        else if ((sum(SO[1:6])/TotalSO) > (2/3)) { #Various granivores combined
-                TF <- 530
-        }
-        else if (sum(SO[1:6]) > (sum(SO[7:11]))) { 
-                if (sum(SO[7:8]) > sum(SO[9:11])) {
-                        TF <- 742 #Mixed livestock: granivores and dairying
-                }
-                else {
-                        TF <- 741 #Mixed livestock: granivores and non-dairying grazing livestock
-                }
-        }
-        else if (sum(SO[1:6]) < (sum(SO[7:11]))) { 
-                if (sum(SO[7:8]) > sum(SO[9:11])) {
-                        TF <- 732 #Mixed livestock, mainly non-dairying grazing livestock
-                }
-                else {
-                        TF <- 731 #Mixed livestock, mainly dairying
-                }
-        }
-        else {
-                TF <- 0
-        }
-        c(SO, TotalSO, EconomicSize, TF) 
-})
-FarmTypes <- as.data.frame(t(FarmTypes))
-colnames(FarmTypes) <- c(paste("SO",SOAnimals$AnimalCategory), "TotalSO", "EconomicSize", "TF")
-row.names(FarmTypes) <- paste("s", c(1:nrow(FarmTypes)), sep="")
-
 #Subselect FADN dataset
 BEL2012 <- subset(BEL2012, BEL2012$A1 == 341) #Only Flanders
 table(BEL2012$A34) #Frequency table according to Farm Type                   
@@ -136,49 +38,116 @@ FADNselection$TF <- BEL2012$A25
 FADNselection$Sizeclass <- BEL2012$A26
 FADNselection$TotalInputCosts <- BEL2012$SE270
 FADNselection$TotalSpecificCosts <- BEL2012$SE281
+FADNselection$BeefandVeal <- BEL2012$SE220
+FADNselection$Poultrymeat <- BEL2012$SE235
+FADNselection$Eggs <- BEL2012$SE240
+FADNselection$Pigs <- BEL2012$SE225
+FADNselection$SpecificLivestockCosts <- BEL2012$SE309 * BEL2012$SE080
+FADNselection$GrazingCosts <- BEL2012$SE310 + BEL2012$SE330
+FADNselection$PigsPoultryCosts <- BEL2012$SE320 + BEL2012$SE330
+FADNselection$TotalCosts <- BEL2012$F64 + BEL2012$F65 + BEL2012$F66 + BEL2012$F67 + BEL2012$F68 
+                                + BEL2012$F69 + BEL2012$F70 + BEL2012$F71
+
+##Make data frame with output and costs for all animal categories
+EconomicParameters <- colnames(FarmAnimals)
+EconomicParameters <- EconomicParameters[2:12]
+EconomicParameters <- as.data.frame(EconomicParameters)
+EconomicParameters$Output <- 0
+EconomicParameters$Costs <- 0
 
 ##Regression Total Output Livestock
 TOmodel <- lm(TOLivestock ~ broilers + layinghens + turkeys + fatteningpigs + sows + 
                       piglets + horses +fatteningcalves + adultcows +cows0to1 + cows1to2 
               + TF + Sizeclass, data=FADNselection)
-summary(TOmodel)
+capture.output(summary(TOmodel), file="RegressionTOLivestock_All.txt")
 
-#leave out non-significant variables, horses and cows0to1 (other valuation methods)
+#leave out non-significant variables (exception: turkeys), horses and cows0to1 (other valuation methods)
 TOmodel <- lm(TOLivestock ~broilers + layinghens + turkeys + fatteningpigs + sows + 
-                        piglets + horses +fatteningcalves + adultcows +cows0to1 + cows1to2 
+                        piglets + fatteningcalves + adultcows + cows1to2 
                 , data=FADNselection)
+capture.output(summary(TOmodel), file="RegressionTOLivestock_Subselection.txt")
 
-##Regression other livestock & products
+#Take values from regression model
+EconomicParameters$Output[1] <- coef(summary(TOmodel))["broilers", "Estimate"]
+EconomicParameters$Output[2] <- coef(summary(TOmodel))["layinghens", "Estimate"]
+EconomicParameters$Output[3] <- coef(summary(TOmodel))["turkeys", "Estimate"]
+EconomicParameters$Output[4] <- coef(summary(TOmodel))["fatteningpigs", "Estimate"]
+EconomicParameters$Output[5] <- coef(summary(TOmodel))["sows", "Estimate"]
+EconomicParameters$Output[6] <- coef(summary(TOmodel))["piglets", "Estimate"]
+EconomicParameters$Output[8] <- coef(summary(TOmodel))["fatteningcalves", "Estimate"]
+EconomicParameters$Output[9] <- coef(summary(TOmodel))["adultcows", "Estimate"]
+
+
+##Regression value livestock (valuation horses)
 TOOthermodel <- lm(OtherLivestock ~ broilers + layinghens + turkeys + fatteningpigs + sows + 
                       piglets + horses +fatteningcalves + adultcows +cows0to1 + cows1to2 
               + TF + Sizeclass, data=FADNselection)
+capture.output(summary(TOOthermodel), file = "RegressionOtherLivestock_all.txt")
+
+#Retain significant variables
+TOOthermodel <- lm(OtherLivestock ~layinghens + fatteningpigs + 
+                           piglets + horses +fatteningcalves, data=FADNselection)
 summary(TOOthermodel)
+capture.output(summary(TOOthermodel),file= "RegressionOtherLivestock_Subselection.txt")
 
-##Regression Output and Costs Turkeys
-SelectionTurkey <- FADNselection[which(FADNselection$turkeys != 0),]
-TOturkeys <- lm(TOLivestock ~layinghens + turkeys + fatteningpigs , data=SelectionTurkey)
-summary(TOturkeys)
+#Take values from regression model
+EconomicParameters$Output[7] <- coef(summary(TOOthermodel))["horses", "Estimate"]
+
+##Regression value cows0to1 and cows1to2
+BeefModel <- lm(BeefandVeal ~ broilers + layinghens + turkeys + fatteningpigs + sows + 
+                          piglets + horses +fatteningcalves + adultcows +cows0to1 + cows1to2 
+                  + TF + Sizeclass, data=FADNselection)
+capture.output(summary(BeefModel), file = "RegressionBeefAndVeal_all.txt")
+
+#Retain significant variables
+BeefModel <- lm(BeefandVeal ~ adultcows +cows0to1 + cows1to2 +
+                 Sizeclass, data=FADNselection)
+capture.output(summary(BeefModel), file = "RegressionBeefAndVeal_subselection.txt")
+
+#Take values from regression model
+EconomicParameters$Output[10] <- coef(summary(BeefModel))["cows0to1", "Estimate"]
+EconomicParameters$Output[11] <- coef(summary(BeefModel))["cows1to2", "Estimate"]
 
 
-
-#leave out non-significant variables, except for turkeys
-TOturkeys <- 
-
-#Regression total output livestock and livestock products according to livestock categories
-TOmodel <- lm(TOLivestock ~ broilers + layinghens + turkeys + fatteningpigs + sows + 
-                      piglets + horses +fatteningcalves + adultcows +cows0to1 + cows1to2 
-              + TF + Sizeclass, data=FADNselection)
-
-TSC <- lm(TotalSpecificCosts  ~ broilers + layinghens + turkeys + fatteningpigs + sows + 
-                  piglets + horses +fatteningcalves + adultcows +cows0to1 + cows1to2 
-          + TF + Sizeclass, data=FADNselection)
 #Regression total inputs costs
 #Regression total output livestock and livestock products according to livestock categories
 TImodel <- lm(TotalInputCosts ~ broilers + layinghens + turkeys + fatteningpigs + sows + 
                       piglets + horses +fatteningcalves + adultcows +cows0to1 + cows1to2 
               + TF + Sizeclass, data=FADNselection)
+summary(TImodel)
 
-#Regression total specific costs
-TSCmodel <- lm(TotalSpecificCosts ~ broilers + layinghens + turkeys + fatteningpigs + sows + 
+##Regression total specific costs
+TSCmodel <- lm(SpecificLivestockCosts ~ broilers + layinghens + turkeys + fatteningpigs + sows + 
                                    piglets + horses +fatteningcalves + adultcows +cows0to1 + cows1to2 
                            + TF + Sizeclass, data=FADNselection)
+summary(TSCmodel)
+capture.output(summary(TSCmodel), file = "RegressionTotalSpecificCosts_all.txt")
+
+#Retain significant variables (+turkeys)
+TSCmodel <- lm(SpecificLivestockCosts ~ broilers + layinghens + turkeys + fatteningpigs + sows + 
+                       piglets + horses  + adultcows  + cows1to2 
+               , data=FADNselection)
+summary(TSCmodel)
+capture.output(summary(TSCmodel), file = "RegressionTotalSpecificCosts_subselection.txt")
+
+#Take values from regression model
+EconomicParameters$Costs[1] <- coef(summary(TSCmodel))["broilers", "Estimate"]
+EconomicParameters$Costs[2] <- coef(summary(TSCmodel))["layinghens", "Estimate"]
+EconomicParameters$Costs[3] <- coef(summary(TSCmodel))["turkeys", "Estimate"]
+EconomicParameters$Costs[4] <- coef(summary(TSCmodel))["fatteningpigs", "Estimate"]
+EconomicParameters$Costs[5] <- coef(summary(TSCmodel))["sows", "Estimate"]
+EconomicParameters$Costs[6] <- coef(summary(TSCmodel))["piglets", "Estimate"]
+EconomicParameters$Costs[8] <- coef(summary(TSCmodel))["fatteningcalves", "Estimate"]
+EconomicParameters$Costs[9] <- coef(summary(TSCmodel))["adultcows", "Estimate"]
+EconomicParameters$Costs[11] <- coef(summary(TSCmodel))["cows1to2", "Estimate"]
+
+##For remaining animal categories, a subselection is made with all farms containing  that type of animal
+#Sows, horses, fatteningcalves, cows0to1
+FADNhorsesSelection <- FADNselection[which(FADNselection$horses > 0),]
+horsescosts <- lm(TotalCosts ~ horses , data=FADNhorsesSelection)
+summary(horsescosts)
+capture.output(summary(horsescosts), file="RegressionTotalCosts_horses.txt")
+
+FADNSowsSelection <- FADNselection[which(FADNselection$sows > 0),]
+sowscosts <- lm(TotalSpecificCosts ~ sows, data=FADNSowsSelection)
+summary(sowscosts)
