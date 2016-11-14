@@ -38,7 +38,6 @@ pEmissionFactor(sAnimalCategory)
 $gdxin GPBV.gdx
 $load pFarmCoord, pImpactScores, pFarmAnimals, pPermitYear, pEmissionFactor
 $gdxin
-
 ********************************************************************************
 ********************************Model*******************************************
 ********************************************************************************
@@ -47,28 +46,19 @@ Variables
 vAmmoniaEmissionRegion
 vAmmoniaEmissionFarm(sFarm)  ;
 
-Positive variable
+Positive  variable
 vAnimals(sFarm, sAnimalCategory) ;
 
 Equations
 eqAnimals(sFarm, sAnimalCategory) Permit constraint
 eqAmmoniaEmissionFarm(sFarm) ammonia emission per farm
-eqTotalImpact(sFarm) Total Impact Score constraint
-
-
 eqAmmoniaEmissionRegion objective function
 ;
-
-
-
 
 eqAmmoniaEmissionFarm(sFarm)..
 vAmmoniaEmissionFarm(sFarm) =e= sum(sAnimalCategory, (pEmissionFactor(sAnimalCategory) * vAnimals(sFarm, sAnimalCategory))) ;
 
-**Constraints
-eqTotalImpact(sFarm)..
-(vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'TIS') =l= 10000 ;
-
+**Constraint
 eqAnimals(sFarm, sAnimalCategory)..
 vAnimals(sFarm, sAnimalCategory) =l= pFarmAnimals(sFarm, sAnimalCategory) ;
 
@@ -77,13 +67,12 @@ eqAmmoniaEmissionRegion..
 vAmmoniaEmissionRegion =e= SUM(sFarm,vAmmoniaEmissionFarm(sFarm))    ;
 
 
-********************************************************************************
-********************************************************************************
 ********************************Scenario Analysis*******************************
-********************************************************************************
-********************************************************************************
+*===============================================================================
 
-**Scenario 1: <3% CL in  KHC (Reference)
+*-------------------------------------------------------------------------------
+*Scenario 1: <3% CL in  KHC (Reference)-----------------------------------------
+*-------------------------------------------------------------------------------
 
 
 Equations
@@ -94,81 +83,193 @@ eqSignificanceScore(sFarm) Significance Score constraint
 eqSignificanceScore(sFarm)..
 (vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'SS') =l= 3 ;
 
+Model Scenario1 /eqAnimals, eqAmmoniaEmissionFarm, eqAmmoniaEmissionRegion, eqSignificanceScore/          ;
 
+Option lp = CPLEX ;
 
-$ontext
+Solve Scenario1 maxmizing vAmmoniaEmissionRegion using lp ;
 
-**Scenario 2: Efficiency check: Total Impact max. 2847, max. vAmmoniaEmisison, no individual farm constraints
-Equations
-*eqTotalDeposition(sReceptor)     deposition nature j
-eqTotalImpact
-;
-
-*eqTotalDeposition(sReceptor) ..    SUM(sFarm, vDep(sFarm, sReceptor)) + 20 =l= 2*pHabitats(sReceptor, 'KDW') ;
-eqTotalImpact.. sum(sFarm, SUM(sReceptor$(pDeposition(sFarm, sReceptor, "DD") ne 0), vDep(sFarm, sReceptor)/pHabitats(sReceptor, 'KDW'))) =l= 3348.77 ;
-
-
-
-**Scenario 3: Same as scenario 2 (ceiling average deposition), but wich individual ceiling of 10%CL
-Equations
-*eqTotalDeposition(sReceptor)     deposition nature j
-eqContribution(sFarm, sReceptor)      deposition of farm i on nature j
-eqTotalImpact
-;
-
-
-*eqTotalDeposition(sReceptor) ..    SUM(sFarm, vDep(sFarm, sReceptor)) + 20 =l= 2*pHabitats(sReceptor, 'KDW') ;
-eqContribution(sFarm,sReceptor)$(pDeposition(sFarm, sReceptor, "DD") ne 0) ..     vDep(sFarm, sReceptor)  =l=  0.10 *pHabitats(sReceptor, 'KDW') ;
-eqTotalImpact.. sum(sFarm, SUM(sReceptor$(pDeposition(sFarm, sReceptor, "DD") ne 0), vDep(sFarm, sReceptor)/pHabitats(sReceptor, 'KDW'))) =l= 308.74 ;
-
-
-
-
-
-**Scenario '4-5-6: Using impact score, based on sum deposition/Cl ratio, respectively 10-5-2
-
-
-Equations
-*eqTotalDeposition(sReceptor)     deposition nature j
-eqvDepPercCL(sFarm)
-eqTotalImpact
-;
-
-*eqTotalDeposition(sReceptor) ..    SUM(sFarm, vDep(sFarm, sReceptor)) + 20 =l= 2*pHabitats(sReceptor, 'KDW') ;
-
-eqvDepPercCL(sFarm)..         sum(sReceptor$(pDeposition(sFarm, sReceptor, "DD") ne 0), vDep(sFarm, sReceptor)/pHabitats(sReceptor, 'KDW')) =l= 10 ;
-eqTotalImpact.. sum(sFarm, SUM(sReceptor$(pDeposition(sFarm, sReceptor, "DD") ne 0), vDep(sFarm, sReceptor)/pHabitats(sReceptor, 'KDW'))) =l= 139.58 ;
-
-$offtext
-
-Model RegionalModel /All/ ;
-
-Option Reslim = 200000 ;
-
-Solve RegionalModel using lp maximizing vAmmoniaEmissionRegion ;
-
-Display vAnimals.l, vAnimals.m ;
-
-Display RegionalModel.MODELSTAT, RegionalModel.SOLVESTAT ;
+$batinclude GPBVreporting.gms
 
 parameter
-dSignificanceScore(sFarm)
-dTotalImpactScore(sFarm)
-dTotalImpact
-dPercentageOccupied(sFarm, sAnimalCategory) percentage of permitted capacitiy occupied by animals
-dPercentageOccupiedFarm(sFarm)
-dPercentageOccupiedRegion
-dPermittedAnimals(sFarm)
+dTotalImpactReference, dAmmoniaEmissionReference, pModelStat, pSolveStat       ;
+
+dTotalImpactReference = dTotalImpact ;
+dAmmoniaEmissionReference = dAmmoniaEmission ;
+pModelStat = Scenario1.MODELSTAT         ;
+pSolveSTat = Scenario1.SOLVESTAT         ;
+
+
+execute_unload 'sc1.gdx'
+
+*-------------------------------------------------------------------------------
+*Scenario 2: Efficiency check: Total Impact max. 1349 (sc1), max. vAmmoniaEmisison, no individual farm constraints
+*-------------------------------------------------------------------------------
+
+
+Equations
+eqTotalImpactRegion
 ;
 
-dSignificanceScore(sFarm) = (vAmmoniaEmissionFarm.l(sFarm)/5000)* pImpactScores(sFarm, 'SS')   ;
-dTotalImpactScore(sFarm) = (vAmmoniaEmissionFarm.l(sFarm)/5000)* pImpactScores(sFarm, 'TIS')     ;
-dTotalImpact = sum(sFarm, dTotalImpactScore(sFarm)) ;
-dPercentageOccupied(sFarm, sAnimalCategory)$(pFarmAnimals(sFarm, sAnimalCategory) ne 0) = (vAnimals.l(sFarm, sAnimalCategory)/pFarmAnimals(sFarm, sAnimalCategory)) * 100  ;
-dPermittedAnimals(sFarm) =  sum(sAnimalCategory, rel_ne(pFarmAnimals(sFarm, sAnimalCategory),0)) ;
-dPercentageOccupiedFarm(sFarm)$(dPermittedAnimals(sFarm) ne 0) = (sum(sAnimalCategory, dPercentageOccupied(sFarm, sAnimalCategory)) / dPermittedAnimals(sFarm));
-dPercentageOccupiedRegion = (sum(sFarm,(dPercentageOccupiedFarm(sFarm)))/card(sFarm))             ;
+*lower than total impact from previous model
+eqTotalImpactRegion..
+sum(sFarm, (vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'TIS')) =l= dTotalImpactReference ;
 
-display dSignificancescore, dTotalImpactScore, dTotalImpact, dPercentageOccupied,  dPercentageOccupiedFarm, dPercentageOccupiedRegion ;
+Model Scenario2 /Scenario1 - eqSignificanceScore + eqTotalImpactRegion/          ;
+
+Option lp = CPLEX ;
+
+Solve Scenario2 maxmizing vAmmoniaEmissionRegion using lp ;
+
+$batinclude GPBVreporting.gms
+
+Parameter pModelStat, pSolveStat ;
+
+pModelStat = Scenario2.MODELSTAT         ;
+pSolveSTat = Scenario2.SOLVESTAT         ;
+
+
+execute_unload 'sc2.gdx'
+
+*-------------------------------------------------------------------------------
+**Scenario 3: Same as scenario 2 (ceiling total impact), but wich individual ceiling of 10%CL
+*-------------------------------------------------------------------------------
+Equations
+eqSignificanceScoreSc3(sFarm) Significance Score constraint
+;
+
+eqSignificanceScoreSc3(sFarm)..
+(vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'SS') =l= 10 ;
+;
+
+Model Scenario3 /Scenario2 + eqSignificanceScoreSc3/          ;
+
+Option lp = CPLEX ;
+
+Solve Scenario3 maxmizing vAmmoniaEmissionRegion using lp ;
+
+$batinclude GPBVreporting.gms
+
+Parameter pModelStat, pSolveStat ;
+
+pModelStat = Scenario3.MODELSTAT         ;
+pSolveSTat = Scenario3.SOLVESTAT         ;
+
+execute_unload 'sc3.gdx'
+
+*-------------------------------------------------------------------------------
+**Scenario 4: Using impact score, based on sum deposition/Cl ratio, max 10------
+*-------------------------------------------------------------------------------
+
+Equations
+eqTotalImpactSc4(sFarm) Total Impact Score constraint
+;
+
+eqTotalImpactSc4(sFarm)..
+(vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'TIS') =l= 10 ;
+
+
+Model Scenario4 /Scenario2 + eqTotalImpactSc4/          ;
+
+Option lp = CPLEX ;
+
+Solve Scenario4 maxmizing vAmmoniaEmissionRegion using lp ;
+
+$batinclude GPBVreporting.gms
+
+Parameter pModelStat, pSolveStat ;
+
+pModelStat = Scenario4.MODELSTAT         ;
+pSolveSTat = Scenario4.SOLVESTAT         ;
+
+execute_unload 'sc4.gdx'
+
+*-------------------------------------------------------------------------------
+**Scenario 5: Using impact score, based on sum deposition/Cl ratio, max 5-------
+*-------------------------------------------------------------------------------
+
+Equations
+eqTotalImpactSc5(sFarm) Total Impact Score constraint
+;
+
+eqTotalImpactSc5(sFarm)..
+(vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'TIS') =l= 5 ;
+
+
+Model Scenario5 /Scenario2 + eqTotalImpactSc5/          ;
+
+Option lp = CPLEX ;
+
+Solve Scenario5 maxmizing vAmmoniaEmissionRegion using lp ;
+
+$batinclude GPBVreporting.gms
+
+Parameter pModelStat, pSolveStat ;
+
+pModelStat = Scenario5.MODELSTAT         ;
+pSolveSTat = Scenario5.SOLVESTAT         ;
+
+execute_unload 'sc5.gdx'
+
+*-------------------------------------------------------------------------------
+**Scenario 6: Using impact score, based on sum deposition/Cl ratio, max 2-------
+*-------------------------------------------------------------------------------
+
+Equations
+eqTotalImpactSc6(sFarm) Total Impact Score constraint
+;
+
+eqTotalImpactSc6(sFarm)..
+(vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'TIS') =l= 2 ;
+
+
+Model Scenario6 /Scenario2 + eqTotalImpactSc6/          ;
+
+Option lp = CPLEX ;
+
+Solve Scenario6 maxmizing vAmmoniaEmissionRegion using lp ;
+
+$batinclude GPBVreporting.gms
+
+Parameter pModelStat, pSolveStat ;
+
+pModelStat = Scenario6.MODELSTAT         ;
+pSolveSTat = Scenario6.SOLVESTAT         ;
+
+execute_unload 'sc6.gdx'
+
+*-------------------------------------------------------------------------------
+**Scenario 7: Effectivity check, minimize TIS, emission bigger than sc1   2-----
+*-------------------------------------------------------------------------------
+
+Variable
+vTotalImpact
+;
+
+Equation
+eqTotalImpactRegionSc7
+eqAmmoniaCeiling ;
+
+eqTotalImpactRegionSc7..
+vTotalImpact =e= sum(sFarm, (vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'TIS')) ;
+
+eqAmmoniaCeiling..
+vAmmoniaEmissionRegion =g= dAmmoniaEmissionReference ;
+
+Model Scenario7 /Scenario1 - eqSignificanceScore + eqTotalImpactRegionSc7 + eqAmmoniaCeiling/ ;
+
+Option lp = CPLEX ;
+
+Solve Scenario7 using lp minimizing vTotalImpact ;
+
+$batinclude GPBVreporting.gms
+
+Parameter pModelStat, pSolveStat ;
+
+pModelStat = Scenario6.MODELSTAT         ;
+pSolveSTat = Scenario6.SOLVESTAT         ;
+
+execute_unload 'sc7.gdx'
+
 
 
