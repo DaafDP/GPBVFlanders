@@ -1,7 +1,7 @@
 #Required packages + defining GAMS directory 
 library(gdxrrw)
 library(reshape2)
-igdx("C:/GAMS/win64/24.5/")
+igdx("C:/GAMS/win64/24.7/")
 
 #Clear environment
 rm(list = ls())
@@ -128,10 +128,26 @@ EmissionFactors$i <- as.factor(EmissionFactors$i)
 attr(EmissionFactors, "symName") <- "pEmissionFactor"
 attr(EmissionFactors, "ts") <- "EMAV emission factors for BBT AEAS (kg NH3 per year per place)"
 attr(EmissionFactors, "domains") <- "sAnimalCategory"
+
+#Data AMS 2012
+BrutoSaldo <- data.frame(c("Broilers", "LayingHens", "AdultCows", "FatteningPigs", "Sows", "Piglets" ))
+BrutoSaldo$value <- c(2.0029, 3.6398, 1310.21, 54.43, 246.82, 10.63)
+colnames(BrutoSaldo) <- c("i", "value")
+BrutoSaldo$i <- as.factor(BrutoSaldo$i)
+attr(BrutoSaldo, "symName") <- "pBrutoSaldo"
+attr(BrutoSaldo, "ts") <- "Bruto Saldo per animal category, AML 2012"
+attr(BrutoSaldo, "domains") <- "ssAnimalCategory"
  
 wgdx.lst("C:/Users/ddpue/Documents/GPBV Flanders/GAMS/GPBV.gdx", FarmCoordinates, ImpactScores, 
-         AnimalCategory, FarmAnimals, PermitYear, EmissionFactors)
+         AnimalCategory, FarmAnimals, PermitYear, EmissionFactors, BrutoSaldo)
 
-#Quit R
+ssAnimalCategory <- data.frame(c("Broilers", "LayingHens", "AdultCows", "FatteningPigs", "Sows", "Piglets" ))
+colnames(ssAnimalCategory) <- "i"
+attr(ssAnimalCategory, "symName") <- "ssAnimalCategory"
+attr(ssAnimalCategory, "ts") <- "animals for which we have bruto saldo"
+
+wgdx.lst("C:/Users/ddpue/Documents/GPBV Flanders/GAMS/BrutoSaldo.gdx", BrutoSaldo, ssAnimalCategory)
+
+#Quit 
 q("yes)
 
