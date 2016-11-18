@@ -1,9 +1,9 @@
 *Dataset GPBV farms Flanders (coordinates, permitted animals)
 *EMAV ammonia stable emissions
-*Hoedje dataset (IFDM, VITO, 20*20 km², resolutie 100 m, meteo 2012 Luchtbal)
+*Hoedje dataset (IFDM, VITO, 20*20 kmÂ², resolutie 100 m, meteo 2012 Luchtbal)
 *Deposition velocities VLOPS
 *Bruto Saldo AML 2012
-*HealthCost ammonia 12€/kg
+*HealthCost ammonia 12â‚¬/kg
 *Data preprocessing and making of gdx file in R
 
 
@@ -169,9 +169,7 @@ pModelStat = Scenario2.MODELSTAT         ;
 pSolveSTat = Scenario2.SOLVESTAT         ;
 
 
-execute_unload 'Alternative.gdx'
-
-execute 'gdxdiff Reference.gdx Alternative.gdx scenario2.gdx' ;
+execute_unload 'Scenario2.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 3: Same as scenario 2 (ceiling total impact), but wich individual ceiling of 10%CL
@@ -198,9 +196,7 @@ pModelStat = Scenario3.MODELSTAT         ;
 pSolveSTat = Scenario3.SOLVESTAT         ;
 
 
-execute_unload 'Alternative.gdx'
-
-execute 'gdxdiff Reference.gdx Alternative.gdx scenario3.gdx' ;
+execute_unload 'Scenario3.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 4: Using impact score, based on sum deposition/Cl ratio, max 10------
@@ -227,9 +223,7 @@ Parameter pModelStat, pSolveStat ;
 pModelStat = Scenario4.MODELSTAT         ;
 pSolveSTat = Scenario4.SOLVESTAT         ;
 
-execute_unload 'Alternative.gdx'
-
-execute 'gdxdiff Reference.gdx Alternative.gdx scenario4.gdx' ;
+execute_unload 'Scenario4.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 5: Using impact score, based on sum deposition/Cl ratio, max 5-------
@@ -256,9 +250,7 @@ Parameter pModelStat, pSolveStat ;
 pModelStat = Scenario5.MODELSTAT         ;
 pSolveSTat = Scenario5.SOLVESTAT         ;
 
-execute_unload 'Alternative.gdx'
-
-execute 'gdxdiff Reference.gdx Alternative.gdx scenario5.gdx' ;
+execute_unload 'Scenario5.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 6: Using impact score, based on sum deposition/Cl ratio, max 2-------
@@ -269,7 +261,7 @@ eqTotalImpactSc6(sFarm) Total Impact Score constraint
 ;
 
 eqTotalImpactSc6(sFarm)..
-(vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'TIS') =l= 2 ;
+(vAmmoniaEmissionFarm(sFarm)/5000)*  pImpactScores(sFarm, 'TIS') =l= 2 ;
 
 
 Model Scenario6 /Scenario2 + eqTotalImpactSc6/          ;
@@ -285,9 +277,7 @@ Parameter pModelStat, pSolveStat ;
 pModelStat = Scenario6.MODELSTAT         ;
 pSolveSTat = Scenario6.SOLVESTAT         ;
 
-execute_unload 'Alternative.gdx'
-
-execute 'gdxdiff Reference.gdx Alternative.gdx scenario6.gdx' ;
+execute_unload 'Scenario6.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 7: Effectivity check, minimize TIS,  societal profit bigger  than sc1
@@ -320,9 +310,19 @@ Parameter pModelStat, pSolveStat ;
 pModelStat = Scenario7.MODELSTAT         ;
 pSolveSTat = Scenario7.SOLVESTAT         ;
 
-execute_unload 'Alternative.gdx'
+execute_unload 'Scenario7.gdx'
 
-execute 'gdxdiff Reference.gdx Alternative.gdx scenario7.gdx' ;
+*===============================================================================
+*===============================Report: merged file=============================
+*===============================================================================
 
+$setglobal Scenarios "Reference.gdx Scenario2.gdx Scenario3.gdx Scenario4.gdx Scenario5.gdx Scenario6.gdx Scenario7.gdx"
+$setglobal FarmResults "id=dPercentageOccupiedFarm, id=dSignificanceScore, id=dTotalImpactScore, id=dSignificanceScore, id=vAmmoniaEmissionFarm, id=vProfitFarm"
+$setglobal Equations "id=EqSignificanceScore id=EqSignificanceScoreSc id=EqTotalImpactSc4 id=EqTotalImpactSc5 id=EqTotalImpactSc6"
+$setglobal RegionResults "id=dPercentageOccupiedRegion id=dTotalImpact id=dTotalProfit id=dClosedFarms id=vAmmoniaEmissionRegion"
+$setglobal ModelStatus "id=pModelStat id=pSolveStat"
+execute 'gdxmerge %Scenarios% %FarmResults% %Equations% %RegionResults% %ModelStatus%' ;
 
+*Alternative: merged file with everything
+*execute 'gdxmerge %scenarios%'
 
