@@ -4,7 +4,6 @@
 *Deposition velocities VLOPS
 *Data preprocessing and making of gdx file in R
 
-
 ********************************************************************************
 *****************************Data preprocessing in R and  Data Input************
 ********************************************************************************
@@ -38,6 +37,8 @@ pEmissionFactor(sAnimalCategory)
 $gdxin GPBV.gdx
 $load pFarmCoord, pImpactScores, pFarmAnimals, pPermitYear, pEmissionFactor
 $gdxin
+
+$exit
 ********************************************************************************
 ********************************Model*******************************************
 ********************************************************************************
@@ -65,6 +66,8 @@ vAnimals(sFarm, sAnimalCategory) =l= pFarmAnimals(sFarm, sAnimalCategory) ;
 **Objective
 eqAmmoniaEmissionRegion..
 vAmmoniaEmissionRegion =e= SUM(sFarm,vAmmoniaEmissionFarm(sFarm))    ;
+
+
 
 
 ********************************Scenario Analysis*******************************
