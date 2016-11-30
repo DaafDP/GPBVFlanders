@@ -2,7 +2,10 @@
 *EMAV ammonia stable emissions
 *Hoedje dataset (IFDM, VITO, 20*20 km², resolutie 100 m, meteo 2012 Luchtbal)
 *Deposition velocities VLOPS
+*Bruto Saldo AML 2012
+*HealthCost ammonia 12€/kg
 *Data preprocessing and making of gdx file in R
+
 
 ********************************************************************************
 *****************************Data preprocessing in R and  Data Input************
@@ -20,10 +23,15 @@ Sets
     sFarm /s1*s826/
     sImpactscores /TIS, SS/
     sCoordinates /X, Y/
-    sAnimalCategory ;
+    sAnimalCategory
+    ssAnimalCategory(sAnimalCategory) ;
 
 $gdxin GPBV.gdx
 $load sAnimalCategory
+$gdxin
+
+$gdxin BrutoSaldo.gdx
+$load ssAnimalCategory
 $gdxin
 
 Parameters
@@ -32,20 +40,37 @@ pImpactScores(sFarm, sImpactscores)
 pFarmAnimals(sFarm, sAnimalCategory)
 pPermitYear(sFarm)
 pEmissionFactor(sAnimalCategory)
+pBrutoSaldo(ssAnimalCategory)
 ;
 
 $gdxin GPBV.gdx
 $load pFarmCoord, pImpactScores, pFarmAnimals, pPermitYear, pEmissionFactor
 $gdxin
 
-$exit
+$gdxin BrutoSaldo.gdx
+$load pBrutoSaldo
+$gdxin
+
+Scalar pHealthCost health cost (euro) per kg ammonia emitted /12/ ;
+
+Set sAnimalsIncluded(sAnimalCategory) all animals considered in economic model (dynamic set)
+;
+
+sAnimalsIncluded(sAnimalCategory) = yes ;
+sAnimalsIncluded('Turkeys') = no ;
+sAnimalsIncluded('Horses') = no ;
+sAnimalsIncluded('FatteningCalves') = no ;
+
+
 ********************************************************************************
 ********************************Model*******************************************
 ********************************************************************************
 
 Variables
 vAmmoniaEmissionRegion
-vAmmoniaEmissionFarm(sFarm)  ;
+vAmmoniaEmissionFarm(sFarm)
+vProfitSociety
+vProfitFarm(sFarm) ;
 
 Positive  variable
 vAnimals(sFarm, sAnimalCategory) ;
@@ -53,24 +78,36 @@ vAnimals(sFarm, sAnimalCategory) ;
 Equations
 eqAnimals(sFarm, sAnimalCategory) Permit constraint
 eqAmmoniaEmissionFarm(sFarm) ammonia emission per farm
-eqAmmoniaEmissionRegion objective function
+eqAmmoniaEmissionRegion total ammonia emission region
+eqProfitFarm(sFarm) profit per farm
+eqProfitSociety objective fucntion
+eqYoungCows(sFarm) For every adult cow we assume there's one cow younger than 1 and 1 cow 1 to 2
+eqCows(sFarm)  For every adult cow we assume there's one cow younger than 1 and 1 cow 1 to 2
 ;
 
 eqAmmoniaEmissionFarm(sFarm)..
-vAmmoniaEmissionFarm(sFarm) =e= sum(sAnimalCategory, (pEmissionFactor(sAnimalCategory) * vAnimals(sFarm, sAnimalCategory))) ;
+vAmmoniaEmissionFarm(sFarm) =e= sum(sAnimalsIncluded, (pEmissionFactor(sAnimalsIncluded) * vAnimals(sFarm, sAnimalsIncluded))) ;
 
-**Constraint
 eqAnimals(sFarm, sAnimalCategory)..
 vAnimals(sFarm, sAnimalCategory) =l= pFarmAnimals(sFarm, sAnimalCategory) ;
 
-**Objective
 eqAmmoniaEmissionRegion..
 vAmmoniaEmissionRegion =e= SUM(sFarm,vAmmoniaEmissionFarm(sFarm))    ;
 
+eqProfitFarm(sFarm)..
+vProfitFarm(sFarm) =e= sum(ssAnimalCategory, (vAnimals(sFarm, ssAnimalCategory) * pBrutoSaldo(ssAnimalCategory)))   ;
 
+eqProfitSociety..
+vProfitSociety =e= sum(sFarm, vProfitFarm(sFarm)) - (pHealthCost * vAmmoniaEmissionRegion) ;
 
+eqYoungCows(sFarm)..
+vAnimals(sFarm, 'Cows0to1') - vAnimals(sFarm, 'Cows1to2') =e= 0 ;
 
-********************************Scenario Analysis*******************************
+eqCows(sFarm)..
+vAnimals(sFarm, 'AdultCows') - 3*vAnimals(sFarm, 'Cows0to1')  =e= 0 ;
+
+*===============================================================================
+*===============================Scenario Analysis===============================
 *===============================================================================
 
 *-------------------------------------------------------------------------------
@@ -86,29 +123,29 @@ eqSignificanceScore(sFarm) Significance Score constraint
 eqSignificanceScore(sFarm)..
 (vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'SS') =l= 3 ;
 
-Model Scenario1 /eqAnimals, eqAmmoniaEmissionFarm, eqAmmoniaEmissionRegion, eqSignificanceScore/          ;
+Model Scenario1 /eqAnimals, eqAmmoniaEmissionFarm, eqAmmoniaEmissionRegion, eqProfitFarm, eqProfitSociety, eqYoungCows, eqCows, eqSignificanceScore/          ;
 
 Option lp = CPLEX ;
 
-Solve Scenario1 maxmizing vAmmoniaEmissionRegion using lp ;
+Solve Scenario1 maximizing vProfitSociety using lp ;
 
-$batinclude GPBVreporting.gms
+$batinclude GPBVreportingeconomic.gms
+
 
 parameter
-dTotalImpactReference, dAmmoniaEmissionReference, pModelStat, pSolveStat       ;
+dTotalImpactReference, dTotalProfitReference, dAmmoniaEmissionReference, pModelStat, pSolveStat       ;
 
+dAmmoniaEmissionReference = dAmmoniaEmissionRegion ;
 dTotalImpactReference = dTotalImpact ;
-dAmmoniaEmissionReference = dAmmoniaEmission ;
+dTotalProfitReference = dTotalProfit ;
 pModelStat = Scenario1.MODELSTAT         ;
 pSolveSTat = Scenario1.SOLVESTAT         ;
 
-
-execute_unload 'sc1.gdx'
+execute_unload 'Reference.gdx'
 
 *-------------------------------------------------------------------------------
 *Scenario 2: Efficiency check: Total Impact max. 1349 (sc1), max. vAmmoniaEmisison, no individual farm constraints
 *-------------------------------------------------------------------------------
-
 
 Equations
 eqTotalImpactRegion
@@ -122,9 +159,9 @@ Model Scenario2 /Scenario1 - eqSignificanceScore + eqTotalImpactRegion/         
 
 Option lp = CPLEX ;
 
-Solve Scenario2 maxmizing vAmmoniaEmissionRegion using lp ;
+Solve Scenario2 maximizing vProfitSociety using lp ;
 
-$batinclude GPBVreporting.gms
+$batinclude GPBVreportingeconomic.gms
 
 Parameter pModelStat, pSolveStat ;
 
@@ -132,7 +169,7 @@ pModelStat = Scenario2.MODELSTAT         ;
 pSolveSTat = Scenario2.SOLVESTAT         ;
 
 
-execute_unload 'sc2.gdx'
+execute_unload 'Scenario2.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 3: Same as scenario 2 (ceiling total impact), but wich individual ceiling of 10%CL
@@ -149,16 +186,17 @@ Model Scenario3 /Scenario2 + eqSignificanceScoreSc3/          ;
 
 Option lp = CPLEX ;
 
-Solve Scenario3 maxmizing vAmmoniaEmissionRegion using lp ;
+Solve Scenario3 maximizing vProfitSociety using lp ;
 
-$batinclude GPBVreporting.gms
+$batinclude GPBVreportingeconomic.gms
 
 Parameter pModelStat, pSolveStat ;
 
 pModelStat = Scenario3.MODELSTAT         ;
 pSolveSTat = Scenario3.SOLVESTAT         ;
 
-execute_unload 'sc3.gdx'
+
+execute_unload 'Scenario3.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 4: Using impact score, based on sum deposition/Cl ratio, max 10------
@@ -176,16 +214,16 @@ Model Scenario4 /Scenario2 + eqTotalImpactSc4/          ;
 
 Option lp = CPLEX ;
 
-Solve Scenario4 maxmizing vAmmoniaEmissionRegion using lp ;
+Solve Scenario4 maximizing vProfitSociety using lp ;
 
-$batinclude GPBVreporting.gms
+$batinclude GPBVreportingeconomic.gms
 
 Parameter pModelStat, pSolveStat ;
 
 pModelStat = Scenario4.MODELSTAT         ;
 pSolveSTat = Scenario4.SOLVESTAT         ;
 
-execute_unload 'sc4.gdx'
+execute_unload 'Scenario4.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 5: Using impact score, based on sum deposition/Cl ratio, max 5-------
@@ -203,16 +241,16 @@ Model Scenario5 /Scenario2 + eqTotalImpactSc5/          ;
 
 Option lp = CPLEX ;
 
-Solve Scenario5 maxmizing vAmmoniaEmissionRegion using lp ;
+Solve Scenario5 maximizing vProfitSociety using lp ;
 
-$batinclude GPBVreporting.gms
+$batinclude GPBVreportingeconomic.gms
 
 Parameter pModelStat, pSolveStat ;
 
 pModelStat = Scenario5.MODELSTAT         ;
 pSolveSTat = Scenario5.SOLVESTAT         ;
 
-execute_unload 'sc5.gdx'
+execute_unload 'Scenario5.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 6: Using impact score, based on sum deposition/Cl ratio, max 2-------
@@ -223,26 +261,26 @@ eqTotalImpactSc6(sFarm) Total Impact Score constraint
 ;
 
 eqTotalImpactSc6(sFarm)..
-(vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'TIS') =l= 2 ;
+(vAmmoniaEmissionFarm(sFarm)/5000)*  pImpactScores(sFarm, 'TIS') =l= 2 ;
 
 
 Model Scenario6 /Scenario2 + eqTotalImpactSc6/          ;
 
 Option lp = CPLEX ;
 
-Solve Scenario6 maxmizing vAmmoniaEmissionRegion using lp ;
+Solve Scenario6 maximizing vProfitSociety using lp ;
 
-$batinclude GPBVreporting.gms
+$batinclude GPBVreportingeconomic.gms
 
 Parameter pModelStat, pSolveStat ;
 
 pModelStat = Scenario6.MODELSTAT         ;
 pSolveSTat = Scenario6.SOLVESTAT         ;
 
-execute_unload 'sc6.gdx'
+execute_unload 'Scenario6.gdx'
 
 *-------------------------------------------------------------------------------
-**Scenario 7: Effectivity check, minimize TIS, emission bigger than sc1   2-----
+**Scenario 7: Effectivity check, minimize TIS,  societal profit bigger  than sc1
 *-------------------------------------------------------------------------------
 
 Variable
@@ -251,28 +289,40 @@ vTotalImpact
 
 Equation
 eqTotalImpactRegionSc7
-eqAmmoniaCeiling ;
+eqSocietalProfit ;
 
 eqTotalImpactRegionSc7..
 vTotalImpact =e= sum(sFarm, (vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'TIS')) ;
 
-eqAmmoniaCeiling..
-vAmmoniaEmissionRegion =g= dAmmoniaEmissionReference ;
+eqSocietalProfit..
+vProfitSociety =g= dTotalProfitReference ;
 
-Model Scenario7 /Scenario1 - eqSignificanceScore + eqTotalImpactRegionSc7 + eqAmmoniaCeiling/ ;
+Model Scenario7 /Scenario1 - eqSignificanceScore + eqTotalImpactRegionSc7 + eqSocietalProfit/ ;
 
 Option lp = CPLEX ;
 
 Solve Scenario7 using lp minimizing vTotalImpact ;
 
-$batinclude GPBVreporting.gms
+$batinclude GPBVreportingeconomic.gms
 
 Parameter pModelStat, pSolveStat ;
 
-pModelStat = Scenario6.MODELSTAT         ;
-pSolveSTat = Scenario6.SOLVESTAT         ;
+pModelStat = Scenario7.MODELSTAT         ;
+pSolveSTat = Scenario7.SOLVESTAT         ;
 
-execute_unload 'sc7.gdx'
+execute_unload 'Scenario7.gdx'
 
+*===============================================================================
+*===============================Report: merged file=============================
+*===============================================================================
 
+$setglobal Scenarios "Reference.gdx Scenario2.gdx Scenario3.gdx Scenario4.gdx Scenario5.gdx Scenario6.gdx Scenario7.gdx"
+$setglobal FarmResults "id=dPercentageOccupiedFarm, id=dSignificanceScore, id=dTotalImpactScore, id=dSignificanceScore, id=vAmmoniaEmissionFarm, id=vProfitFarm"
+$setglobal Equations "id=EqSignificanceScore id=EqSignificanceScoreSc id=EqTotalImpactSc4 id=EqTotalImpactSc5 id=EqTotalImpactSc6"
+$setglobal RegionResults "id=dPercentageOccupiedRegion id=dTotalImpact id=dTotalProfit id=dClosedFarms id=vAmmoniaEmissionRegion"
+$setglobal ModelStatus "id=pModelStat id=pSolveStat"
+execute 'gdxmerge %Scenarios% %FarmResults% %Equations% %RegionResults% %ModelStatus%' ;
+
+*Alternative: merged file with everything
+*execute 'gdxmerge %scenarios%'
 
