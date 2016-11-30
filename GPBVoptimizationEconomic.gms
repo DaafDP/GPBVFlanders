@@ -1,3 +1,11 @@
+*=============================================================================
+* File      : GPBVoptimizationEconomic.gms
+* Author    : David De Pue
+* Version   :
+* Date      :
+* Changed   : 30-November-2016
+* Changed
+* Remarks:
 *Dataset GPBV farms Flanders (coordinates, permitted animals)
 *EMAV ammonia stable emissions
 *Hoedje dataset (IFDM, VITO, 20*20 km², resolutie 100 m, meteo 2012 Luchtbal)
@@ -7,9 +15,9 @@
 *Data preprocessing and making of gdx file in R
 
 
-********************************************************************************
-*****************************Data preprocessing in R and  Data Input************
-********************************************************************************
+*===============================================================================
+*=======================Data preprocessing and data input=======================
+*===============================================================================
 *Linking source/receptor with right data from 'hoedje'
 *Making GDX file with all the data
 
@@ -61,10 +69,35 @@ sAnimalsIncluded('Turkeys') = no ;
 sAnimalsIncluded('Horses') = no ;
 sAnimalsIncluded('FatteningCalves') = no ;
 
+Set class /Green, Orange, Red/
 
-********************************************************************************
-********************************Model*******************************************
-********************************************************************************
+Parameter
+pFarmColour(sFarm) Classify farm according to ANB colour - assuming maximum capacity 1:green 2:orange 3:red
+pSS(sFarm) Significance score if full capacity
+pTotalClassNumbers(class) ;
+
+pSS(sFarm) = (sum(sAnimalsIncluded,(pEmissionFactor(sAnimalsIncluded) * pFarmAnimals(sFarm, sAnimalsIncluded)))/5000) * pImpactScores(sFarm, 'SS') ;
+
+Loop(class,
+pTotalClassNumbers(class) = 0
+) ;
+
+Loop(sFarm,
+If (pSS(sFarm) > 50,
+   pFarmColour(sFarm) = 3 ;
+   pTotalClassNumbers('Red') = pTotalClassNumbers('Red')+1 ;
+Elseif pSS(sFarm) <3,
+   pFarmColour(sFarm) = 1 ;
+   pTotalClassNumbers('Green') = pTotalClassNumbers('Green')+1 ;
+Else
+   pFarmColour(sFarm) = 2 ;
+   pTotalClassNumbers('Orange') = pTotalClassNumbers('Orange')+1 ;  )
+   ;
+) ;
+
+*===============================================================================
+*===============================Model===========================================
+*===============================================================================
 
 Variables
 vAmmoniaEmissionRegion
@@ -116,7 +149,7 @@ vAnimals(sFarm, 'AdultCows') - 3*vAnimals(sFarm, 'Cows0to1')  =e= 0 ;
 
 
 Equations
-eqSignificanceScore(sFarm) Significance Score constraint
+eqSignificanceScore(sFarm) Significance Score constraint 3% (reference scenario)
 ;
 
 
@@ -124,6 +157,7 @@ eqSignificanceScore(sFarm)..
 (vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'SS') =l= 3 ;
 
 Model Scenario1 /eqAnimals, eqAmmoniaEmissionFarm, eqAmmoniaEmissionRegion, eqProfitFarm, eqProfitSociety, eqYoungCows, eqCows, eqSignificanceScore/          ;
+*Model Scenario1 /eqAmmoniaEmissionFarm, eqAmmoniaEmissionRegion, eqProfitFarm, eqProfitSociety, eqYoungCows, eqCows, eqSignificanceScore/          ;
 
 Option lp = CPLEX ;
 
@@ -141,7 +175,7 @@ dTotalProfitReference = dTotalProfit ;
 pModelStat = Scenario1.MODELSTAT         ;
 pSolveSTat = Scenario1.SOLVESTAT         ;
 
-execute_unload 'Reference.gdx'
+execute_unloaddi 'Reference.gdx'
 
 *-------------------------------------------------------------------------------
 *Scenario 2: Efficiency check: Total Impact max. 1349 (sc1), max. vAmmoniaEmisison, no individual farm constraints
@@ -169,13 +203,13 @@ pModelStat = Scenario2.MODELSTAT         ;
 pSolveSTat = Scenario2.SOLVESTAT         ;
 
 
-execute_unload 'Scenario2.gdx'
+execute_unloaddi 'Scenario2.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 3: Same as scenario 2 (ceiling total impact), but wich individual ceiling of 10%CL
 *-------------------------------------------------------------------------------
 Equations
-eqSignificanceScoreSc3(sFarm) Significance Score constraint
+eqSignificanceScoreSc3(sFarm) Significance Score constraint 10%
 ;
 
 eqSignificanceScoreSc3(sFarm)..
@@ -196,14 +230,14 @@ pModelStat = Scenario3.MODELSTAT         ;
 pSolveSTat = Scenario3.SOLVESTAT         ;
 
 
-execute_unload 'Scenario3.gdx'
+execute_unloaddi 'Scenario3.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 4: Using impact score, based on sum deposition/Cl ratio, max 10------
 *-------------------------------------------------------------------------------
 
 Equations
-eqTotalImpactSc4(sFarm) Total Impact Score constraint
+eqTotalImpactSc4(sFarm) Total Impact Score constraint 10
 ;
 
 eqTotalImpactSc4(sFarm)..
@@ -223,14 +257,14 @@ Parameter pModelStat, pSolveStat ;
 pModelStat = Scenario4.MODELSTAT         ;
 pSolveSTat = Scenario4.SOLVESTAT         ;
 
-execute_unload 'Scenario4.gdx'
+execute_unloaddi 'Scenario4.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 5: Using impact score, based on sum deposition/Cl ratio, max 5-------
 *-------------------------------------------------------------------------------
 
 Equations
-eqTotalImpactSc5(sFarm) Total Impact Score constraint
+eqTotalImpactSc5(sFarm) Total Impact Score constraint 5
 ;
 
 eqTotalImpactSc5(sFarm)..
@@ -250,14 +284,14 @@ Parameter pModelStat, pSolveStat ;
 pModelStat = Scenario5.MODELSTAT         ;
 pSolveSTat = Scenario5.SOLVESTAT         ;
 
-execute_unload 'Scenario5.gdx'
+execute_unloaddi 'Scenario5.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 6: Using impact score, based on sum deposition/Cl ratio, max 2-------
 *-------------------------------------------------------------------------------
 
 Equations
-eqTotalImpactSc6(sFarm) Total Impact Score constraint
+eqTotalImpactSc6(sFarm) Total Impact Score constraint 2
 ;
 
 eqTotalImpactSc6(sFarm)..
@@ -277,7 +311,7 @@ Parameter pModelStat, pSolveStat ;
 pModelStat = Scenario6.MODELSTAT         ;
 pSolveSTat = Scenario6.SOLVESTAT         ;
 
-execute_unload 'Scenario6.gdx'
+execute_unloaddi 'Scenario6.gdx'
 
 *-------------------------------------------------------------------------------
 **Scenario 7: Effectivity check, minimize TIS,  societal profit bigger  than sc1
@@ -310,18 +344,18 @@ Parameter pModelStat, pSolveStat ;
 pModelStat = Scenario7.MODELSTAT         ;
 pSolveSTat = Scenario7.SOLVESTAT         ;
 
-execute_unload 'Scenario7.gdx'
+execute_unloaddi 'Scenario7.gdx'
 
 *===============================================================================
 *===============================Report: merged file=============================
 *===============================================================================
 
 $setglobal Scenarios "Reference.gdx Scenario2.gdx Scenario3.gdx Scenario4.gdx Scenario5.gdx Scenario6.gdx Scenario7.gdx"
-$setglobal FarmResults "id=dPercentageOccupiedFarm, id=dSignificanceScore, id=dTotalImpactScore, id=dSignificanceScore, id=vAmmoniaEmissionFarm, id=vProfitFarm"
+$setglobal FarmResults "id=dPercentageOccupiedFarm, id=dSignificanceScore, id=dTotalImpactScore, id=dSignificanceScore, id=dAmmoniaEmissionFarm, id=dProfitFarm"
 $setglobal Equations "id=EqSignificanceScore id=EqSignificanceScoreSc id=EqTotalImpactSc4 id=EqTotalImpactSc5 id=EqTotalImpactSc6"
-$setglobal RegionResults "id=dPercentageOccupiedRegion id=dTotalImpact id=dTotalProfit id=dClosedFarms id=vAmmoniaEmissionRegion"
+$setglobal RegionResults "id=dPercentageOccupiedRegion id=dTotalImpact id=dTotalProfit id=dClosedFarms id=dAmmoniaEmissionRegion"
 $setglobal ModelStatus "id=pModelStat id=pSolveStat"
-execute 'gdxmerge %Scenarios% %FarmResults% %Equations% %RegionResults% %ModelStatus%' ;
+execute 'gdxmerge %Scenarios% %FarmResults% %Equations% %RegionResults% %ModelStatus% id=pFarmColour' ;
 
 *Alternative: merged file with everything
 *execute 'gdxmerge %scenarios%'
