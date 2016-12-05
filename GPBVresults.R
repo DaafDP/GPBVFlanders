@@ -3,14 +3,13 @@ library(gdxrrw)
 library(reshape2)
 library(ggplot2)
 library(scales)
-library(ineq)
 igdx("C:/GAMS/win64/24.7/")
-
-#Source MultiplotFunction
-source("C:/Users/ddpue/Documents/R/Multiplot.R")
 
 #Clear environment
 rm(list = ls())
+
+#Source MultiplotFunction
+source("C:/Users/ddpue/Documents/R/Multiplot.R")
 
 #Setwd
 setwd("C:/Users/ddpue/Documents/GPBV Flanders/R/")
@@ -136,20 +135,74 @@ ggplot(dat=ImpactScores, aes(x=TIS, y=SS, colour=Colour))+
         theme(text = element_text(size=15))
 ggsave("SSvsTIS.png", dpi=400)
 
-#Scatterplots Profit versus Impact
-for (i in (1:ncol(dProfitFarm))) {
+#Scatterplots Profit versus Impact (TIS and SS)
+for (i in (1:(ncol(dProfitFarm)-1))) {
         scen <- paste('Scenario', as.character(i),sep= "")
-        df <- data.frame(cbind(dProfitFarm[,i], dTotalImpactScore[,i]))
-        colnames(df) <- c("Profit", "TIS")
-        ggplot(dat=df, aes(x=TIS, y=Profit))+
-                geom_point(shape=1)+
-        ggtitle(paste("Profit versus Impact - ", scen, sep=""))
+        df <- data.frame(cbind(dProfitFarm[,i], dTotalImpactScore[,i]), as.factor(pFarmColour$Reference))
+        colnames(df) <- c("Profit", "TIS", "SignificanceClass")
+        ggplot(dat=df, aes(x=TIS, y=Profit, colour=SignificanceClass))+
+        geom_point(shape=20)+
+        scale_colour_manual(values = c("green", "orange", "red"), labels = c("<5%", "5-50%", ">50%"), 
+        guide_legend(title="Significance Class"))+
+        ggtitle(paste("Profit versus Total Impact - ", scen, sep=""))
         ggsave(paste(scen, "_ProfitvsTIS.png", sep=""), dpi=400)
+        
+        scen <- paste('Scenario', as.character(i),sep= "")
+        df <- data.frame(cbind(dProfitFarm[,i], dSignificanceScore[,i]), as.factor(pFarmColour$Reference))
+        colnames(df) <- c("Profit", "SS", "SignificanceClass")
+        ggplot(dat=df, aes(x=SS, y=Profit, colour=SignificanceClass))+
+        geom_point(shape=20)+
+        scale_colour_manual(values = c("green", "orange", "red"), labels = c("<5%", "5-50%", ">50%"), 
+        guide_legend(title="Significance Class"))+
+        ggtitle(paste("Profit versus Significance Score - ", scen, sep=""))
+        ggsave(paste(scen, "_ProfitvsSS.png", sep=""), dpi=400)
 }
 
-#Ginicoefficient all scenarios
-GlobalData$Gini <- apply(dProfitFarm, 2, function(x){
-        subselect <- x[which(x > 0)]
-        ineq(subselect, type="Gini")
+colnames(Sources) <- c("ID", "X", "Y")
+
+#Make table with binary variable 1:closed 0:open
+NonOperatingFarms <- apply(dProfitFarm, c(1,2), function(x){
+                        if (x == 0) {
+                        return(0)
+                        }
+                        else {
+                        return(1)
+                        }
+                        })
+NonOperatingFarms <- as.data.frame(cbind(Sources, NonOperatingFarms))
+
+#Save as .csv
+write.csv(NonOperatingFarms, "NonOperatingFarms.csv")
+
+#Make table with constrained farms 1: constrained by SS/TIS ceiling 0: not constrained
+SSconstrained <- dSignificanceScore[,1:3]
+SSconstrained$Scenario2 <- NULL
+SSconstrained<- apply(SSconstrained, c(1,2), function(x){
+        if (isTRUE(all.equal(x, 5, tolerance =1e-5)) == TRUE |
+            isTRUE(all.equal(x, 10, tolerance =1e-5)) == TRUE){
+                return(1)
+        }
+        else {
+                return(0)
+        }
 })
+SSconstrained <- as.data.frame(cbind(Sources, SSconstrained))
+
+TISconstrained <- dTotalImpactScore[,4:6]
+TISconstrained <- apply(TISconstrained, c(1,2), function(x){
+        if (isTRUE(all.equal(x, 10, tolerance =1e-5)) == TRUE |
+            isTRUE(all.equal(x, 5, tolerance =1e-5)) == TRUE |
+            isTRUE(all.equal(x, 2, tolerance =1e-5))){
+                return(1)
+        }
+        else {
+                return(0)
+        }
+})
+
+TISconstrained <- as.data.frame(cbind(Sources, TISconstrained))
+
+#Save as .csv
+write.csv(SSconstrained, "SSconstrained.csv")
+write.csv(TISconstrained, "TISTISconstrained.csv")
 

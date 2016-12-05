@@ -130,8 +130,8 @@ attr(EmissionFactors, "ts") <- "EMAV emission factors for BBT AEAS (kg NH3 per y
 attr(EmissionFactors, "domains") <- "sAnimalCategory"
 
 #Data AMS 2012
-BrutoSaldo <- data.frame(c("Broilers", "LayingHens", "AdultCows", "FatteningPigs", "Sows", "Piglets" ))
-BrutoSaldo$value <- c(2.0029, 3.6398, 1310.21, 54.43, 246.82, 10.63)
+BrutoSaldo <- data.frame(c("Broilers", "LayingHens", "AdultCows", "FatteningPigs", "Sows"))
+BrutoSaldo$value <- c(2.0017, 7.9723, 1310.21, 54.43, 246.82)
 colnames(BrutoSaldo) <- c("i", "value")
 BrutoSaldo$i <- as.factor(BrutoSaldo$i)
 attr(BrutoSaldo, "symName") <- "pBrutoSaldo"
