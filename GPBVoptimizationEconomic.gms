@@ -3,7 +3,7 @@
 * Author    : David De Pue
 * Version   :
 * Date      :
-* Changed   : 30-November-2016
+* Changed   : 05-December-2016
 * Changed
 * Remarks:
 *Dataset GPBV farms Flanders (coordinates, permitted animals)
@@ -11,7 +11,7 @@
 *Hoedje dataset (IFDM, VITO, 20*20 km², resolutie 100 m, meteo 2012 Luchtbal)
 *Deposition velocities VLOPS
 *Bruto Saldo AML 2012
-*HealthCost ammonia 12€/kg
+*HealthCost ammonia 36€/kg
 *Data preprocessing and making of gdx file in R
 
 
@@ -59,7 +59,7 @@ $gdxin BrutoSaldo.gdx
 $load pBrutoSaldo
 $gdxin
 
-Scalar pHealthCost health cost (euro) per kg ammonia emitted /12/ ;
+Scalar pHealthCost health cost (euro) per kg ammonia emitted /36/ ;
 
 Set sAnimalsIncluded(sAnimalCategory) all animals considered in economic model (dynamic set)
 ;
@@ -74,9 +74,13 @@ Set class /Green, Orange, Red/
 Parameter
 pFarmColour(sFarm) Classify farm according to ANB colour - assuming maximum capacity 1:green 2:orange 3:red
 pSS(sFarm) Significance score if full capacity
+pTIS(sFarm) Total Impact Score if full capacity
 pTotalClassNumbers(class) ;
 
 pSS(sFarm) = (sum(sAnimalsIncluded,(pEmissionFactor(sAnimalsIncluded) * pFarmAnimals(sFarm, sAnimalsIncluded)))/5000) * pImpactScores(sFarm, 'SS') ;
+pSS(sFarm)$(pSS(sFarm) = 0) = EPS ;
+pTIS(sFarm) = (sum(sAnimalsIncluded,(pEmissionFactor(sAnimalsIncluded) * pFarmAnimals(sFarm, sAnimalsIncluded)))/5000) * pImpactScores(sFarm, 'TIS') ;
+pTIS(sFarm)$(pTIS(sFarm) = 0) = EPS ;
 
 Loop(class,
 pTotalClassNumbers(class) = 0
@@ -86,7 +90,7 @@ Loop(sFarm,
 If (pSS(sFarm) > 50,
    pFarmColour(sFarm) = 3 ;
    pTotalClassNumbers('Red') = pTotalClassNumbers('Red')+1 ;
-Elseif pSS(sFarm) <3,
+Elseif pSS(sFarm) <5,
    pFarmColour(sFarm) = 1 ;
    pTotalClassNumbers('Green') = pTotalClassNumbers('Green')+1 ;
 Else
@@ -144,17 +148,17 @@ vAnimals(sFarm, 'AdultCows') - 3*vAnimals(sFarm, 'Cows0to1')  =e= 0 ;
 *===============================================================================
 
 *-------------------------------------------------------------------------------
-*Scenario 1: <3% CL in  KHC (Reference)-----------------------------------------
+*Scenario 1: <5% CL in  KHC (Reference)-----------------------------------------
 *-------------------------------------------------------------------------------
 
 
 Equations
-eqSignificanceScore(sFarm) Significance Score constraint 3% (reference scenario)
+eqSignificanceScore(sFarm) Significance Score constraint 5% (reference scenario)
 ;
 
 
 eqSignificanceScore(sFarm)..
-(vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'SS') =l= 3 ;
+(vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'SS') =l= 5 ;
 
 Model Scenario1 /eqAnimals, eqAmmoniaEmissionFarm, eqAmmoniaEmissionRegion, eqProfitFarm, eqProfitSociety, eqYoungCows, eqCows, eqSignificanceScore/          ;
 *Model Scenario1 /eqAmmoniaEmissionFarm, eqAmmoniaEmissionRegion, eqProfitFarm, eqProfitSociety, eqYoungCows, eqCows, eqSignificanceScore/          ;
@@ -178,7 +182,7 @@ pSolveSTat = Scenario1.SOLVESTAT         ;
 execute_unloaddi 'Reference.gdx'
 
 *-------------------------------------------------------------------------------
-*Scenario 2: Efficiency check: Total Impact max. 1349 (sc1), max. vAmmoniaEmisison, no individual farm constraints
+*Scenario 2: Efficiency check: Total Impact max. sc1, max. vAmmoniaEmisison, no individual farm constraints
 *-------------------------------------------------------------------------------
 
 Equations
@@ -354,8 +358,9 @@ $setglobal Scenarios "Reference.gdx Scenario2.gdx Scenario3.gdx Scenario4.gdx Sc
 $setglobal FarmResults "id=dPercentageOccupiedFarm, id=dSignificanceScore, id=dTotalImpactScore, id=dSignificanceScore, id=dAmmoniaEmissionFarm, id=dProfitFarm"
 $setglobal Equations "id=EqSignificanceScore id=EqSignificanceScoreSc id=EqTotalImpactSc4 id=EqTotalImpactSc5 id=EqTotalImpactSc6"
 $setglobal RegionResults "id=dPercentageOccupiedRegion id=dTotalImpact id=dTotalProfit id=dClosedFarms id=dAmmoniaEmissionRegion"
+$setglobal ImpactClass "id=pSS id=pTIS id=pTotalClassNumbers id=pFarmColour"
 $setglobal ModelStatus "id=pModelStat id=pSolveStat"
-execute 'gdxmerge %Scenarios% %FarmResults% %Equations% %RegionResults% %ModelStatus% id=pFarmColour' ;
+execute 'gdxmerge %Scenarios% %FarmResults% %Equations% %RegionResults% %ModelStatus% %ImpactClass%' ;
 
 *Alternative: merged file with everything
 *execute 'gdxmerge %scenarios%'
