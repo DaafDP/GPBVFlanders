@@ -24,7 +24,8 @@ Sources <- read.delim("C:/Users/ddpue/Documents/GPBV Flanders/R/GPBVFlanders/Sou
 ND <- length(Scenarios) * nrow(Sources)
 
 #Read in Data - Global results
-GlobPars <- c('dTotalProfit', 'dClosedFarms', 'dTotalImpact', 'dPercentageOccupiedRegion', 'dAmmoniaEmissionRegion')
+GlobPars <- c('dTotalProfit', 'dClosedFarms', 'dTotalImpact', 'dPercentageMaxProfitRegion', 'dAmmoniaEmissionRegion'
+              ,'dMaxProfitRegion', 'dMaxImpactRegion', 'dMaxAmmoniaEmissionRegion')
 GlobalData <- sapply(GlobPars, function(x) {
         tmp <- rgdx.param("merged", x, names = 'Scenario', squeeze = FALSE)
         tmp$value
@@ -36,7 +37,7 @@ rownames(GlobalData) <- Scenarios
 GlobalData$dClosedFarms <- GlobalData$dClosedFarms - 1 #Substract turkey farm
 
 #Read in Data - Farm results
-FarmPars <- c('dProfitFarm', 'dTotalImpactScore', 'dSignificanceScore',  'pFarmColour', 'pSS', 'pTIS') 
+FarmPars <- c('dProfitFarm', 'dTotalImpactScore', 'dSignificanceScore',  'pFarmColour', 'pSS', 'pTIS', 'dPercentageofMaxProfit') 
 FarmData <- sapply(FarmPars, function(x){
         tmp <- rgdx.param("merged", x, names = 'Scenario', squeeze = FALSE)
         tmp$value
@@ -54,8 +55,10 @@ FarmData <- apply(FarmData, 2, function(x){
 #Unwrap List with farm-level parameters to different data.frames
 list2env(FarmData,envir=.GlobalEnv)
 
+HealthCost <- rgdx.param("merged", 'pHealthCost')
+
 #Define some extra Global results
-GlobalData$CostPM <- GlobalData$dAmmoniaEmissionRegion * 12 
+GlobalData$CostPM <- GlobalData$dAmmoniaEmissionRegion * HealthCost$value[1]
 GlobalData$PrivateProfit <- GlobalData$dTotalProfit + GlobalData$CostPM
 GlobalData$Scenario <- rownames(GlobalData)
 GlobalData$BenefitToImpactRatio <- GlobalData$dTotalProfit / (GlobalData$dTotalImpact )
@@ -65,6 +68,7 @@ SCPB <- GlobalData
 SCPB[,2:5] <- NULL
 SCPB$PrivateProfit <- NULL
 SCPB$BenefitToImpactRatio <- NULL
+SCPB[,2:4] <- NULL
 SCPB <- melt(SCPB)
 
 #Stacked plot with costPM and PrivateProfit
@@ -73,6 +77,7 @@ p1 <- ggplot(data=SCPB, aes(x=Scenario, y=value, fill=variable))+
         guides(fill=guide_legend(title=NULL)) +
         scale_fill_manual(labels=c("Total Societal Benefit (€)", "PM Health Cost (€)"),
                             values=c("#009E73", "#D55E00"))+
+        geom_hline(yintercept = GlobalData$dMaxProfitRegion[1], colour = "red", lty = 2, lwd=1) +
         ggtitle("Total private benefit as sum of total societal benefit and external cost")+
         theme(plot.title = element_text(size = 15, face = "bold")) +
         xlab(NULL) + ylab(NULL) +
@@ -99,6 +104,7 @@ ggsave("ClosedFarms.png", width=10, height=10, dpi=400)
 #Plot total impact score
 p3 <- ggplot(data=GlobalData, aes(x=rownames(GlobalData), y=dTotalImpact))+
         geom_bar(colour = "black", width=.8, stat="identity", fill = "#DD8888")+
+        geom_hline(yintercept=GlobalData$dMaxImpactRegion[1], colour = "red", lty=2, lwd=1)+
         xlab(NULL) + ylab(NULL)+
         ggtitle("Total impact score of all farms combined")+
         guides(fill=FALSE)+
@@ -119,6 +125,19 @@ p4<- ggplot(data=GlobalData, aes(x=rownames(GlobalData), y=BenefitToImpactRatio)
 
 plot(p4)
 ggsave("BenefitToImpact.png", width=10, height=10, dpi=400)
+
+#Plot ammonia emission
+p5 <- ggplot(data=GlobalData, aes(x=rownames(GlobalData), y=dAmmoniaEmissionRegion))+
+        geom_bar(colour = "black", width=.8, stat="identity", fill = "#DD8888")+
+        geom_hline(yintercept=GlobalData$dMaxAmmoniaEmissionRegion[1], colour = "red", lty=2, lwd=1)+
+        xlab(NULL) + ylab(NULL)+
+        ggtitle("Total ammonia emission of all farms combined")+
+        guides(fill=FALSE)+
+        theme(text = element_text(size=15),
+              axis.text.x = element_text(angle=90, face="bold"))
+
+plot(p5)
+ggsave("TotalEmission.png", width=10, height=10, dpi=400)
 
 #Scatterplot Total Impact Score vs SS (full capacity)
 ImpactScores <- data.frame(cbind(pTIS$Reference, pSS$Reference))
@@ -202,7 +221,28 @@ TISconstrained <- apply(TISconstrained, c(1,2), function(x){
 
 TISconstrained <- as.data.frame(cbind(Sources, TISconstrained))
 
+
+
 #Save as .csv
 write.csv(SSconstrained, "SSconstrained.csv")
-write.csv(TISconstrained, "TISTISconstrained.csv")
+write.csv(TISconstrained, "TISconstrained.csv")
 
+#Significance Class
+SC <- as.data.frame(cbind(Sources, pFarmColour$Reference))
+write.csv(SC, 'SignificanceClass.csv')
+
+#Table with farms with suboptimal capacity (<95% of total) 1:suboptimal 0:optimal
+Suboptimal<- apply(dPercentageofMaxProfit, c(1,2), function(x){
+        print(x)
+        if (isTRUE(all.equal(x, 100, tolerance=2)) == TRUE ){
+                return(0)
+        }
+        else {
+                return(1)
+        }
+})
+Suboptimal <- as.data.frame(cbind(Sources, Suboptimal))
+
+write.csv(Suboptimal, "Suboptimal.csv")
+dPercentageofMaxProfit <- as.data.frame(cbind(Sources, dPercentageofMaxProfit))
+write.csv(dPercentageofMaxProfit, "PercentageofMaxProfit.csv")
