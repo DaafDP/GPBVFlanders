@@ -3,7 +3,7 @@
 * Author    : David De Pue
 * Version   :
 * Date      :
-* Changed   : 05-December-2016
+* Changed   : 06-December-2016
 * Changed
 * Remarks:
 *Dataset GPBV farms Flanders (coordinates, permitted animals)
@@ -355,12 +355,13 @@ execute_unloaddi 'Scenario7.gdx'
 *===============================================================================
 
 $setglobal Scenarios "Reference.gdx Scenario2.gdx Scenario3.gdx Scenario4.gdx Scenario5.gdx Scenario6.gdx Scenario7.gdx"
-$setglobal FarmResults "id=dPercentageOccupiedFarm, id=dSignificanceScore, id=dTotalImpactScore, id=dSignificanceScore, id=dAmmoniaEmissionFarm, id=dProfitFarm"
+$setglobal FarmResults "id=dPercentageofMaxProfit, id=dSignificanceScore, id=dTotalImpactScore, id=dSignificanceScore, id=dAmmoniaEmissionFarm, id=dProfitFarm"
 $setglobal Equations "id=EqSignificanceScore id=EqSignificanceScoreSc id=EqTotalImpactSc4 id=EqTotalImpactSc5 id=EqTotalImpactSc6"
-$setglobal RegionResults "id=dPercentageOccupiedRegion id=dTotalImpact id=dTotalProfit id=dClosedFarms id=dAmmoniaEmissionRegion"
+$setglobal RegionResults "id=dPercentageMaxProfitRegion id=dTotalImpact id=dTotalProfit id=dClosedFarms id=dAmmoniaEmissionRegion"
+$setglobal GeneralResults "id=dMaxProfitRegion id=dMaxImpactRegion id=pHealthCost id=dMaxAmmoniaEmissionRegion"
 $setglobal ImpactClass "id=pSS id=pTIS id=pTotalClassNumbers id=pFarmColour"
 $setglobal ModelStatus "id=pModelStat id=pSolveStat"
-execute 'gdxmerge %Scenarios% %FarmResults% %Equations% %RegionResults% %ModelStatus% %ImpactClass%' ;
+execute 'gdxmerge %Scenarios% %FarmResults% %Equations% %RegionResults% %GeneralResults% %ModelStatus% %ImpactClass%' ;
 
 *Alternative: merged file with everything
 *execute 'gdxmerge %scenarios%'
