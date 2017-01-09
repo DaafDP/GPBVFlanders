@@ -123,7 +123,7 @@ attr(PermitYear, "ts") <- "Year in which permit was granted (start of 20 years p
 attr(PermitYear, "domains") <- c("sFarm")
 
 EmissionFactors <- data.frame(AnimalCategory)
-EmissionFactors$value <- c(0.02, 0.015, 0.33, 3.705, 4.18, 9.12, 1.2, 2.2, 0.2, 5, 2.38)
+EmissionFactors$value <- c(0.02, 0.015, 0.33, 3.705, 4.18, 9.12, 1.2, 4, 0.2, 5, 2.38)
 EmissionFactors$i <- as.factor(EmissionFactors$i)
 attr(EmissionFactors, "symName") <- "pEmissionFactor"
 attr(EmissionFactors, "ts") <- "EMAV emission factors for BBT AEAS (kg NH3 per year per place)"
