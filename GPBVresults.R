@@ -155,7 +155,7 @@ ggplot(dat=ImpactScores, aes(x=TIS, y=SS, colour=Colour))+
 ggsave("SSvsTIS.png", dpi=400)
 
 #Scatterplots Profit versus Impact (TIS and SS)
-for (i in (1:(ncol(dProfitFarm)-1))) {
+for (i in (1:(ncol(dProfitFarm)))) {
         scen <- paste('Scenario', as.character(i),sep= "")
         df <- data.frame(cbind(dProfitFarm[,i], dTotalImpactScore[,i]), as.factor(pFarmColour$Reference))
         colnames(df) <- c("Profit", "TIS", "SignificanceClass")
