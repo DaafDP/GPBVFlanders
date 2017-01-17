@@ -37,7 +37,8 @@ rownames(GlobalData) <- Scenarios
 GlobalData$dClosedFarms <- GlobalData$dClosedFarms - 1 #Substract turkey farm
 
 #Read in Data - Farm results
-FarmPars <- c('dProfitFarm', 'dTotalImpactScore', 'dSignificanceScore',  'pFarmColour', 'pSS', 'pTIS', 'dPercentageofMaxProfit') 
+FarmPars <- c('dProfitFarm', 'dTotalImpactScore', 'dSignificanceScore',  'pFarmColour', 'pSS', 'pTIS', 
+              'dPercentageofMaxProfit', 'dMaxProfitFarm') 
 FarmData <- sapply(FarmPars, function(x){
         tmp <- rgdx.param("merged", x, names = 'Scenario', squeeze = FALSE)
         tmp$value
@@ -178,6 +179,25 @@ for (i in (1:(ncol(dProfitFarm)))) {
 }
 
 colnames(Sources) <- c("ID", "X", "Y")
+
+#Scatterplots Max. Profit versus Max Impact (TIS and SS)
+df <- data.frame(cbind(dMaxProfitFarm[,1], pTIS[,1]), as.factor(pFarmColour$Reference))
+colnames(df) <- c("Profit", "TIS", "SignificanceClass")
+ggplot(dat=df, aes(x=TIS, y=Profit, colour=SignificanceClass))+
+        geom_point(shape=20)+
+        scale_colour_manual(values = c("green", "orange", "red"), labels = c("<5%", "5-50%", ">50%"), 
+                            guide_legend(title="Significance Class"))+
+        ggtitle("max. Profit versus max. Total Impact")
+ggsave('maxProfitvsTIS.png', dpi=400)
+
+df <- data.frame(cbind(dMaxProfitFarm[,1], pSS[,1]), as.factor(pFarmColour$Reference))
+colnames(df) <- c("Profit", "SS", "SignificanceClass")
+ggplot(dat=df, aes(x=SS, y=Profit, colour=SignificanceClass))+
+        geom_point(shape=20)+
+        scale_colour_manual(values = c("green", "orange", "red"), labels = c("<5%", "5-50%", ">50%"), 
+                            guide_legend(title="Significance Class"))+
+        ggtitle("max. Profit versus max. Significance Score")
+ggsave('maxProfitvsSS.png', dpi=400)
 
 #Make table with binary variable 1:closed 0:open
 NonOperatingFarms <- apply(dProfitFarm, c(1,2), function(x){
