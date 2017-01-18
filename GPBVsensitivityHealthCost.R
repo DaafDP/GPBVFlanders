@@ -281,7 +281,7 @@ ggplot(data=ExternalHealthCost, aes(x=TIStreshold, y=zExternalHealthCost, group 
 ggsave("SensitivityTIStreshold_TotalExternalCost.png", dpi=400)
 
 #Plot Percentage of Max. Profit
-PercentageMaxProfit$TIStreshold <- ClosedFarms$CLtreshold
+PercentageMaxProfit$TIStreshold <- ClosedFarms$TIStreshold
 
 ggplot(data=PercentageMaxProfit, aes(x=TIStreshold, y=zPercentageMaxProfit, group = scenario, colour = scenario, 
                                      shape = scenario))+
@@ -334,7 +334,7 @@ TotalProfit$TIStreshold <- ClosedFarms$TIStreshold
 ggplot(data=TotalProfit, aes(x=TIStreshold, y=zTotalProfit, group = scenario, colour = scenario, 
                              shape = scenario))+
         geom_line(size=1.0) +
-        ggtitle("Total Societal Profit - CL treshold 1-10%")+
+        ggtitle("Total Societal Profit - TIS treshold 0.1-40.0")+
         theme(plot.title = element_text(size = 15, face = "bold"),
               axis.title = element_text(size = 12),
               legend.title = element_text(size = 12),
