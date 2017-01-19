@@ -21,98 +21,103 @@ PrivateProfit <- rgdx.param('SensitivityTIStreshold.gdx', symName = 'zPrivatePro
 TotalImpact <- rgdx.param('SensitivityTIStreshold.gdx', symName = 'zTotalImpact', squeeze = FALSE)
 TotalProfit <- rgdx.param('SensitivityTIStreshold.gdx', symName = 'zTotalProfit', squeeze = FALSE)
 
-#Plot number of closed farms
-ClosedFarms$TIStreshold <- as.integer(sub("r",replacement = "", x = ClosedFarms$run)) /10
+ClosedFarms2 <- rgdx.param('SensitivityCLtreshold.gdx', symName = 'zClosedFarms', squeeze = FALSE)
+ExternalHealthCost2 <- rgdx.param('SensitivityCLtreshold.gdx', symName = 'zExternalHealthCost', squeeze = FALSE)
+PercentageMaxProfit2 <- rgdx.param('SensitivityCLtreshold.gdx', symName = 'zPercentageMaxProfit', squeeze = FALSE)
+PrivateProfit2 <- rgdx.param('SensitivityCLtreshold.gdx', symName = 'zPrivateProfit', squeeze = FALSE)
+TotalImpact2 <- rgdx.param('SensitivityCLtreshold.gdx', symName = 'zTotalImpact', squeeze = FALSE)
+TotalProfit2 <- rgdx.param('SensitivityCLtreshold.gdx', symName = 'zTotalProfit', squeeze = FALSE)
 
-ggplot(data=ClosedFarms, aes(x=TIStreshold, y=zClosedFarms, group = scenario, colour = scenario, 
-                             shape = scenario))+
-        geom_line(size=1.0) +
-        ggtitle("Number of closed farms - TIS treshold 0.1-40.0")+
-        theme(plot.title = element_text(size = 15, face = "bold"),
-              axis.title = element_text(size = 12),
-              legend.title = element_text(size = 12),
-              legend.text = element_text(size = 12),
-              axis.text = element_text(size = 10)) +
-        xlab("TIS treshold") + ylab("# Closed Farms") 
+ReferenceAmmonia <- rgdx.param('SensitivityTIStreshold.gdx', symName = 'rAmmoniaEmission', squeeze = FALSE)
+ReferenceClosedFarms <- rgdx.param('SensitivityTIStreshold.gdx', symName = 'rClosedFarms', squeeze = FALSE)
+ReferenceTotalImpact <- rgdx.param('SensitivityTIStreshold.gdx', symName = 'rTotalImpact', squeeze = FALSE)
+ReferenceTotalProfit <- rgdx.param('SensitivityTIStreshold.gdx', symName = 'rTotalProfit', squeeze = FALSE)
 
-ggsave("SensitivityTIStreshold_ClosedFarms.png", dpi=400)
+PrivateProfit$TIStreshold <- as.integer(sub("r",replacement = "", x = ClosedFarms$run)) /10
+
+ReferenceTotalProfit$PrivateProfit <- ReferenceAmmonia$rAmmoniaEmission * 36 + ReferenceTotalProfit$rTotalProfit
+ReferenceTotalProfit$ExternalHealth <- ReferenceTotalProfit$PrivateProfit - ReferenceTotalProfit$rTotalProfit
 
 #Plot ExternalHealthCost
-ExternalHealthCost$TIStreshold <- ClosedFarms$TIStreshold
+ExternalHealthCost$TIStreshold <- PrivateProfit$TIStreshold
 
-ggplot(data=ExternalHealthCost, aes(x=TIStreshold, y=zExternalHealthCost, group = scenario, colour = scenario, 
-                                    shape = scenario))+
-        geom_line(size=1.0) +
-        ggtitle("Total External Cost - TIS treshold 0.1-40.0")+
+ggplot(data=ExternalHealthCost, aes(x=TIStreshold, y=zExternalHealthCost))+
+        geom_line() +
+        ggtitle("Total External Cost - TIS treshold 0.1-70.0")+
         theme(plot.title = element_text(size = 15, face = "bold"),
               axis.title = element_text(size = 12),
               legend.title = element_text(size = 12),
               legend.text = element_text(size = 12),
               axis.text = element_text(size = 10)) +
+        geom_hline(aes(yintercept=ReferenceTotalProfit$ExternalHealth[1]), colour = "red", lty = "dashed") +
         xlab("TIS treshold") + ylab("Total External Cost (€)") 
 
-ggsave("SensitivityTIStreshold_TotalExternalCost.png", dpi=400)
-
-#Plot Percentage of Max. Profit
-PercentageMaxProfit$TIStreshold <- ClosedFarms$TIStreshold
-
-ggplot(data=PercentageMaxProfit, aes(x=TIStreshold, y=zPercentageMaxProfit, group = scenario, colour = scenario, 
-                                     shape = scenario))+
-        geom_line(size=1.0) +
-        ggtitle("Percentage of Max. Profit - TIS treshold 0.1-40.0")+
-        theme(plot.title = element_text(size = 15, face = "bold"),
-              axis.title = element_text(size = 12),
-              legend.title = element_text(size = 12),
-              legend.text = element_text(size = 12),
-              axis.text = element_text(size = 10)) +
-        xlab("TIS treshold") + ylab("% of max Profit") 
-
-ggsave("SensitivityTIStreshold_PercentageOfMaxProfit.png", dpi=400)
-
 #Plot Private Profit
-PrivateProfit$TIStreshold <- ClosedFarms$TIStreshold 
-
-ggplot(data=PrivateProfit, aes(x=TIStreshold, y=zPrivateProfit, group = scenario, colour = scenario, 
-                               shape = scenario))+
-        geom_line(size=1.0) +
-        ggtitle("Total Private Profit - TIS treshold 0.1-40.0")+
+ggplot(data=PrivateProfit, aes(x=TIStreshold, y=zPrivateProfit))+
+        geom_line() +
+        ggtitle("Total Private Profit - TIS treshold 0.1-70.0")+
         theme(plot.title = element_text(size = 15, face = "bold"),
               axis.title = element_text(size = 12),
               legend.title = element_text(size = 12),
               legend.text = element_text(size = 12),
               axis.text = element_text(size = 10)) +
+        geom_hline(aes(yintercept=ReferenceTotalProfit$PrivateProfit[1]), colour = "red", lty = "dashed") +
         xlab("TIS treshold") + ylab("Total Private Profit (€)") 
 
-ggsave("SensitivityTIStreshold_TotalPrivateProfit.png", dpi = 400)
-
-#Plot Total Impact
-TotalImpact$TIStreshold <- ClosedFarms$TIStreshold
-
-ggplot(data=TotalImpact, aes(x=TIStreshold, y=zTotalImpact, group = scenario, colour = scenario, 
-                             shape = scenario))+
-        geom_line(size=1.0) +
-        ggtitle("Total Impact on Natura 2000 - TIS treshold 0.1-40.0")+
-        theme(plot.title = element_text(size = 15, face = "bold"),
-              axis.title = element_text(size = 12),
-              legend.title = element_text(size = 12),
-              legend.text = element_text(size = 12),
-              axis.text = element_text(size = 10)) +
-        xlab("TIS treshold") + ylab("Total Impact Score") 
-
-ggsave("SensitivityTIStreshold_TotalImpact.png", dpi = 400)
-
 #Plot Total Profit
-TotalProfit$TIStreshold <- ClosedFarms$TIStreshold
+TotalProfit$TIStreshold <- PrivateProfit$TIStreshold
 
-ggplot(data=TotalProfit, aes(x=TIStreshold, y=zTotalProfit, group = scenario, colour = scenario, 
-                             shape = scenario))+
-        geom_line(size=1.0) +
-        ggtitle("Total Societal Profit - TIS treshold 0.1-40.0")+
+ggplot(data=TotalProfit, aes(x=TIStreshold, y=zTotalProfit))+
+        geom_line() +
+        ggtitle("Total Societal Profit - TIS treshold 0.1-70.0")+
         theme(plot.title = element_text(size = 15, face = "bold"),
               axis.title = element_text(size = 12),
               legend.title = element_text(size = 12),
               legend.text = element_text(size = 12),
               axis.text = element_text(size = 10)) +
+        geom_hline(aes(yintercept=ReferenceTotalProfit$rTotalProfit[1]), colour = "red", lty = "dashed")+
+        geom_hline(aes(yintercept=ReferenceTotalProfit$rTotalProfit[2]), colour = "darkgreen", lty = "dashed")+
         xlab("TIS treshold") + ylab("Total Societal Profit (€)") 
 
-ggsave("SensitivityTIStreshold_TotalProfit.png", dpi = 400)
+ggsave("TIS_TotalPrivateProfit.png", dpi = 400)
+
+#Plot Total Impact
+TotalImpact$TIStreshold <- PrivateProfit$TIStreshold
+
+ggplot(data=TotalImpact, aes(x=TIStreshold, y=zTotalImpact))+
+        geom_line(size=1.0) +
+        ggtitle("Total Impact on Natura 2000 - TIS treshold 0.1-70.0")+
+        theme(plot.title = element_text(size = 15, face = "bold"),
+              axis.title = element_text(size = 12),
+              legend.title = element_text(size = 12),
+              legend.text = element_text(size = 12),
+              axis.text = element_text(size = 10)) +
+        geom_hline(aes(yintercept=ReferenceTotalImpact$rTotalImpact[1]), colour = "red", lty = "dashed") +
+        geom_hline(aes(yintercept=ReferenceTotalImpact$rTotalImpact[3]), colour = "darkgreen", lty = "dashed") +
+        xlab("TIS treshold") + ylab("Total Impact Score") 
+
+ggsave("TIS_TotalImpact.png", dpi = 400)
+
+#Scatterplot_ImpactvsProfit 
+df <- as.data.frame(cbind(TotalProfit$zTotalProfit, TotalImpact$zTotalImpact, TotalProfit$TIStreshold))
+df2 <- as.data.frame(cbind(TotalProfit2$zTotalProfit, TotalImpact2$zTotalImpact))
+colnames(df) <- c("profit", "impact", "TIS")
+colnames(df2) <- c("profit", "impact")
+ggplot(dat=df, aes(x=impact, y=profit))+
+        geom_line()+
+        geom_line(dat=df2, aes(x=impact, y=profit), col = "red")+
+        geom_point(x=ReferenceTotalImpact$rTotalImpact[1], y=ReferenceTotalProfit$rTotalProfit[1], colour = "red")+
+        geom_point(x=ReferenceTotalImpact$rTotalImpact[2], y=ReferenceTotalProfit$rTotalProfit[2], colour = "blue")+
+        geom_point(x=ReferenceTotalImpact$rTotalImpact[3], y=ReferenceTotalProfit$rTotalProfit[3], colour = "darkgreen")+
+        ggtitle("Profit versus Total Impact - Individual TIS constraint 0-70")+
+        geom_hline(aes(yintercept=93589597))+
+        geom_vline(aes(xintercept=1926))+
+        theme(plot.title = element_text(size = 15, face = "bold"),
+              axis.title = element_text(size = 12),
+              legend.title = element_text(size = 12),
+              legend.text = element_text(size = 12),
+              axis.text = element_text(size = 10)) +
+        coord_cartesian(ylim=c(66000000, 94000000), xlim=c(500, 2000))+
+        xlab("Impact on Natura 2000 (Total Impact Score)") + ylab("Total Societal Profit (€)")
+
+        ggsave("ProfitvsTIS_IndividualTISconstraint.png", dpi = 400)
