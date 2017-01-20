@@ -1,28 +1,30 @@
 *=============================================================================
 * File      : GPBVsensitivityCLtreshold.gms
 * Author    : David De Pue
-* Version   : 2.0
-* Date      : 16-January-2017
-* Changed   : 18-January-2017
-* Changed     Only CLconstraint scenario solved multiple times
+* Version   : 1.0
+* Date      : 19-January-2017
+* Changed   :
+* Changed   :
 * Remarks:
-**TIS treshold (total impact score) 0-10 (sensitivity analysis)
 *Textify parameter declarations in file 'GPBVreportingeconomic.gms'
 *(no declarations allowed within loop).
-*4 scenarios: Reference (scen1), Efficiency (scen2),
-*TISconstraint(scen3) and Effectiveness (scen4)
+*Calculate optimal 'front' combination of societal profit and total impact on natura 2000 sites
+*Solving 'efficiency' and 'effectiveness' scenario for different impact ceilings or profit floors
 
 *===============================================================================
-*================Define number of iterations and range of CL treshold ==========
+*======Define number of iterations and range profitfloor - impactceiling =======
 *===============================================================================
 
-set run /r1*r700/     ;
+set run /r1*r100/     ;
 
-set scenario /scen1*scen4/ ;
+set scenario /efficiency, effectiveness/ ;
 
 Parameter
-pCLtresholdSens(run) ;
-pCLtresholdSens(run) = (ord(run)) * 0.25  ;
+pProfitFloor(run)
+pImpactCeiling(run) ;
+
+pImpactCeiling(run) = ((ord(run) - 1) * 15) + 500 ;
+pProfitFloor(run) = ((ord(run) - 1)*300000) + 65000000 ;
 
 *===============================================================================
 *=======================Data preprocessing and data input=======================
@@ -133,18 +135,18 @@ dExternalCostHealth
 ;
 
 parameter
-rTotalImpact(scenario), rTotalProfit(scenario), rAmmoniaEmission(scenario), rClosedFarms(scenario) ;
+ImpactCeiling, ProfitFloor, rAmmoniaEmission(scenario), rClosedFarms(scenario) ;
 
 parameters
-zClosedFarms(run)
-zPercentageMaxProfit(run)
-zTotalImpact(run)
-zTotalProfit(run)
-zPrivateProfit(run)
-zExternalHealthCost(run)
-zModelStat(run)
-zSolveStat(run)
-zPercentageMaxProfitFarm(run, sFarm)
+zClosedFarms(run, scenario)
+zPercentageMaxProfit(run, scenario)
+zTotalImpact(run, scenario)
+zTotalProfit(run, scenario)
+zPrivateProfit(run, scenario)
+zExternalHealthCost(run, scenario)
+zModelStat(run, scenario)
+zSolveStat(run, scenario)
+zPercentageMaxProfitFarm(run, scenario, sFarm)
 ;
 
 *===============================================================================
@@ -192,22 +194,7 @@ eqCows(sFarm)..
 vAnimals(sFarm, 'AdultCows') - 3*vAnimals(sFarm, 'Cows0to1')  =e= 0 ;
 
 *-------------------------------------------------------------------------------
-*Scen1: <5% CL in  KHC (Reference)-----------------------------------------
-*-------------------------------------------------------------------------------
-
-Equations
-eqSignificanceScore(sFarm) Significance Score constraint 5% (reference scenario)
-;
-
-
-eqSignificanceScore(sFarm)..
-(vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'SS') =l= 5 ;
-
-Model Reference /eqAnimals, eqAmmoniaEmissionFarm, eqAmmoniaEmissionRegion, eqProfitFarm, eqProfitSociety, eqYoungCows, eqCows, eqSignificanceScore/          ;
-*Model Scenario1 /eqAmmoniaEmissionFarm, eqAmmoniaEmissionRegion, eqProfitFarm, eqProfitSociety, eqYoungCows, eqCows, eqSignificanceScore/          ;
-
-*-------------------------------------------------------------------------------
-*Scen2: Efficiency check: Total Impact max. sc1, max. profit society, no individual farm constraints
+*Scen1: efficiency check: Total Impact max. sc1, max. profit society, no individual farm constraints
 *-------------------------------------------------------------------------------
 
 Equations
@@ -216,27 +203,12 @@ eqTotalImpactRegion
 
 *lower than total impact from previous model
 eqTotalImpactRegion..
-sum(sFarm, (vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'TIS')) =l= rTotalImpact('scen1') ;
+sum(sFarm, (vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'TIS')) =l= ImpactCeiling ;
 
-Model Efficiency /Reference - eqSignificanceScore + eqTotalImpactRegion/          ;
-
-*-------------------------------------------------------------------------------
-**Scen3: Using CL treshold (sensitivity)----------------------------------------
-*-------------------------------------------------------------------------------
-
-Equations
-eqSignificanceScore_sens(sFarm) Significance Score constraint
-;
-
-
-eqSignificanceScore_sens(sFarm)..
-(vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'SS') =l= pCLtreshold ;
-
-
-Model CLconstraint /Reference - eqSignificanceScore + eqSignificanceScore_sens/          ;
+Model efficiency /eqAnimals, eqAmmoniaEmissionFarm, eqAmmoniaEmissionRegion, eqProfitFarm, eqProfitSociety, eqYoungCows, eqCows, eqTotalImpactRegion/          ;
 
 *-------------------------------------------------------------------------------
-**Scen4: Effectivity check, minimize TIS,  societal profit bigger  than sc1
+**Scen2: Effectivity check, minimize TIS,  societal profit bigger  than sc1
 *-------------------------------------------------------------------------------
 
 Variable
@@ -251,66 +223,51 @@ eqTotalImpactRegionSc7..
 vTotalImpact =e= sum(sFarm, (vAmmoniaEmissionFarm(sFarm)/5000)* pImpactScores(sFarm, 'TIS')) ;
 
 eqSocietalProfit..
-vProfitSociety =g= rTotalProfit('scen1') ;
+vProfitSociety =g= ProfitFloor ;
 
-Model Effectiveness /Reference - eqSignificanceScore + eqTotalImpactRegionSc7 + eqSocietalProfit/ ;
-
-*===============================================================================
-*=======================Solve reference scenario's==============================
-*===============================================================================
-Option lp = CPLEX ;
-
-Solve Reference maximizing vProfitSociety using lp ;
-
-$batinclude GPBVreportingeconomic.gms
-
-rAmmoniaEmission('scen1') = dAmmoniaEmissionRegion ;
-rTotalImpact('scen1') = dTotalImpact ;
-rTotalProfit('scen1') = dTotalProfit ;
-rClosedFarms('scen1') = dClosedFarms ;
-
-Solve Efficiency maximizing vProfitSociety using lp ;
-
-$batinclude GPBVreportingeconomic.gms
-
-rAmmoniaEmission('scen2') = dAmmoniaEmissionRegion ;
-rTotalImpact('scen2') = dTotalImpact ;
-rTotalProfit('scen2') = dTotalProfit ;
-rClosedFarms('scen2') = dClosedFarms ;
-
-Solve Effectiveness using lp minimizing vTotalImpact ;
-
-$batinclude GPBVreportingeconomic.gms
-
-rAmmoniaEmission('scen4') = dAmmoniaEmissionRegion ;
-rTotalImpact('scen4') = dTotalImpact ;
-rTotalProfit('scen4') = dTotalProfit ;
-rClosedFarms('scen4') = dClosedFarms ;
+Model effectiveness /eqAnimals, eqAmmoniaEmissionFarm, eqAmmoniaEmissionRegion, eqProfitFarm, eqProfitSociety, eqYoungCows, eqCows,
+eqTotalImpactRegionSc7 + eqSocietalProfit/ ;
 
 *===============================================================================
 *=======================Different model runs====================================
 *===============================================================================
 loop(run,
 
-pCLtreshold = pCLtresholdSens(run)          ;
+ImpactCeiling = pImpactCeiling(run)          ;
+ProfitFloor = pProfitFloor(run)              ;
 
-Solve CLconstraint maximizing vProfitSociety using lp ;
+Solve efficiency maximizing vProfitSociety using lp ;
 
 $batinclude GPBVreportingeconomic.gms
 
-zClosedFarms(run) = dClosedFarms ;
-zPercentageMaxProfit(run) =  dPercentageMaxProfitRegion ;
-zTotalImpact(run) = dTotalImpact ;
-zTotalProfit(run) = dTotalProfit ;
-zPrivateProfit(run) = dPrivateProfit  ;
-zExternalHealthCost(run) = dExternalCostHealth ;
-zModelStat(run) = CLconstraint.MODELSTAT  ;
-zSolveStat(run) = CLconstraint.SOLVESTAT  ;
-zPercentageMaxProfitFarm(run, sFarm) = dPercentageofMaxProfit(sFarm)  ;
+zClosedFarms(run, 'efficiency') = dClosedFarms ;
+zPercentageMaxProfit(run, 'efficiency') =  dPercentageMaxProfitRegion ;
+zTotalImpact(run, 'efficiency') = dTotalImpact ;
+zTotalProfit(run, 'efficiency') = dTotalProfit ;
+zPrivateProfit(run, 'efficiency') = dPrivateProfit  ;
+zExternalHealthCost(run, 'efficiency') = dExternalCostHealth ;
+zModelStat(run, 'efficiency') = efficiency.MODELSTAT  ;
+zSolveStat(run, 'efficiency') = efficiency.SOLVESTAT  ;
+zPercentageMaxProfitFarm(run, 'efficiency', sFarm) = dPercentageofMaxProfit(sFarm)  ;
+
+Solve effectiveness using lp minimizing vTotalImpact ;
+
+$batinclude GPBVreportingeconomic.gms
+
+zClosedFarms(run, 'effectiveness') = dClosedFarms ;
+zPercentageMaxProfit(run, 'effectiveness') =  dPercentageMaxProfitRegion ;
+zTotalImpact(run, 'effectiveness') = dTotalImpact ;
+zTotalProfit(run, 'effectiveness') = dTotalProfit ;
+zPrivateProfit(run, 'effectiveness') = dPrivateProfit  ;
+zExternalHealthCost(run, 'effectiveness') = dExternalCostHealth ;
+zModelStat(run, 'effectiveness') = effectiveness.MODELSTAT  ;
+zSolveStat(run, 'effectiveness') = effectiveness.SOLVESTAT  ;
+zPercentageMaxProfitFarm(run, 'effectiveness', sFarm) = dPercentageofMaxProfit(sFarm)  ;
+
 
 );
 
 *===============================================================================
 *=======================Write away results======================================
 *===============================================================================
-execute_unloaddi 'SensitivityCLtreshold.gdx'
+execute_unloaddi 'GPBVOptimalProfitvsImpact.gdx'
