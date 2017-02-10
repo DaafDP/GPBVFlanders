@@ -114,7 +114,7 @@ colnames(ReferencePoints) <- c("impact", "profit")
 rownames(ReferencePoints) <- c("<5% SS", "Max. Profit", "Min. Impact")
 ReferencePoints <- as.data.frame(Reference)
 
-p3< - ggplot(dat=AllData, aes(x=impact, y=profit, group=scenario, colour=scenario))+
+ggplot(dat=AllData, aes(x=impact, y=profit, group=scenario, colour=scenario))+
         scale_fill_manual(breaks=c("Optimal", "TIS constraint", "SS constraint")) +
         #geom_smooth(se=FALSE) +
         geom_line(size=1.0) +
@@ -122,7 +122,7 @@ p3< - ggplot(dat=AllData, aes(x=impact, y=profit, group=scenario, colour=scenari
         geom_point(x=1444, y=91816739, shape = 17,  colour = "black", size=4)+
         geom_point(x=1444, y=88594131, shape = 18, colour = "black", size=4)+
         #geom_point(dat=ReferencePoints, aes(x=impact, y=profit))+
-        ggtitle("Total Societal Profit versus Total Impact")+
+        ggtitle("Total Societal Benefit versus Total Impact")+
         geom_hline(aes(yintercept=93589597), colour = "red", lty="dotted", size=1)+
         geom_vline(aes(xintercept=1926), colour = "red", lty="dotted", size=1)+
         geom_vline(aes(xintercept=1444), colour="darkgreen", lty="dotted", size =1)+
@@ -133,6 +133,6 @@ p3< - ggplot(dat=AllData, aes(x=impact, y=profit, group=scenario, colour=scenari
               legend.text = element_text(size = 12),
               axis.text = element_text(size = 10)) +
         coord_cartesian(ylim=c(77000000, 93589597), xlim=c(1000, 1926))+
-        xlab("Aggregated Impact on Natura 2000 (Total Impact Score)") + ylab("Total Societal Profit (€)")
+        xlab("Aggregated Impact on Natura 2000 (Total Impact Score)") + ylab("Total Societal Benefit (€)")
 
         ggsave("ProfitvsTIS_Individualconstraint.png", dpi = 400)

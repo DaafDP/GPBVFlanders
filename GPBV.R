@@ -1,6 +1,7 @@
 #Required packages + defining GAMS directory 
 library(gdxrrw)
 library(reshape2)
+library(data.table)
 igdx("C:/GAMS/win64/24.7/")
 
 #Clear environment
@@ -14,6 +15,8 @@ Receptor <- read.delim("C:/Users/ddpue/Documents/GPBV Flanders/R/GPBVFlanders/Re
 Sources <- read.delim("C:/Users/ddpue/Documents/GPBV Flanders/R/GPBVFlanders/Sources.txt")
 Hoedje <- read.csv("~/Regional Model/SpatialOptimization  GPBV Flanders/dataHoedje.csv")
 Permits <- read.delim("C:/Users/ddpue/Documents/GPBV Flanders/R/GPBVFlanders/EnvironmentalPermits.txt")
+ImpactScores <- read.delim("C:/Users/ddpue/Documents/GPBV Flanders/ReceptorSourceEndogenous/ImpactScores.txt", header=FALSE)
+colnames(ImpactScores) <- c("source", "type", "score")
 
 #Vectoren met coordinaten hoedje
 X <- c(-199:200) * 100
@@ -28,12 +31,15 @@ hoedjeND <- as.data.frame(matrix(Hoedje$ND[1:160000], nrow=length(X)))
 rownames(hoedjeND) <- Y
 colnames(hoedjeND) <- X
 
+Receptor$ID <- paste("r", c(1:nrow(Receptor)), sep="")
+
+#Calculate individual dep and IS per pair of source & receptor 
 Scores <- apply(Sources, 1, function(x)
 {
         print(x[1])
         impacttable <- as.data.frame(matrix(ncol=9, nrow=nrow(Receptor)))
-        colnames(impacttable) <- c("ID", "dep", "CL", "Vd", "IS", "X", "Y", "DD", "ND")
-        impacttable$ID <- Receptor$ID
+        colnames(impacttable) <- c("receptor", "dep", "CL", "Vd", "IS", "X", "Y", "DD", "ND")
+        impacttable$receptor <- Receptor$ID
         impacttable$CL <- Receptor$CL
         impacttable$Vd <- Receptor$Vd
         impacttable$TND <- Receptor$TND
@@ -60,21 +66,37 @@ Scores <- apply(Sources, 1, function(x)
         impacttable$ND <- mat$X2
         impacttable$dep <- (5000/8784)*(((impacttable$Vd/0.88)*impacttable$DD)+impacttable$ND)
         impacttable$IS <- impacttable$dep/impacttable$CL
-        TIS <- sum(impacttable$IS)
-        SC <- 100 * max(subset(impacttable, TND > CL, select = IS)) #CHC: TDN > CL!!
-        return(cbind(TIS, SC))
+        temp <- impacttable[,1:5]
+        temp <- cbind("source" = as.character(rep(x[1],nrow(impacttable))), temp)
+        temp[,4:5] <- NULL
+        return(temp)
         #return(((cbind(sum(impacttable$IS), (100*max((impacttable$IS)))))))
         
 })
+DepScores <- rbindlist(Scores, use.names=TRUE)
 
-Scores<- as.data.frame(Scores)
-Scores <- t(Scores)
+colnames(Sources) <- c("ID", "X", "Y")
 
-Sources$TIS <- Scores[,1]
-Sources$SS <- Scores[,2]
-colnames(Sources) <- c("ID", "X", "Y", "TIS", "SS")
 
 #Bundle all data in GDX format
+Deps <- DepScores[,1:3]
+colnames(Deps) <- c("i", "j", "value")
+Deps$i <- as.factor(Deps$i)
+Deps$j <- as.factor(Deps$j)
+attr(Deps, "symName") <- "pDep"
+attr(Deps, "ts") <- "Indivudal  deposition source x to receptor y"
+attr(Deps, "domains") <- c("sFarm", "sReceptor")
+
+IS <- DepScores
+IS$dep <- NULL
+colnames(IS) <- c("i", "j", "value")
+IS$i <- as.factor(IS$i)
+IS$j <- as.factor(IS$j)
+attr(IS, "symName") <- "pDeposition"
+attr(IS, "ts") <- "Indivudal  deposition source x to receptor y"
+attr(IS, "domains") <- c("sFarm", "sReceptor")
+
+
 FarmCoordinates <- Sources[,1:3]
 FarmCoordinates <- melt(FarmCoordinates)
 colnames(FarmCoordinates) <- c("i", "j", "value")
@@ -84,8 +106,15 @@ attr(FarmCoordinates, "symName") <- "pFarmCoord"
 attr(FarmCoordinates, "ts") <- "X and Y Lambert Coordinates Sources"
 attr(FarmCoordinates, "domains") <- c("sFarm", "sCoordinates")
 
-ImpactScores <- Sources[c("ID", "TIS", "SS")]
-ImpactScores <- melt(ImpactScores)
+ReceptorCoordinates <- Receptor[,1:3]
+ReceptorCoordinates <- melt(ReceptorCoordinates)
+colnames(ReceptorCoordinates) <- c("i", "j", "value")
+ReceptorCoordinates$i <- as.factor(ReceptorCoordinates$i)
+ReceptorCoordinates$j <- as.factor(ReceptorCoordinates$j)
+attr(ReceptorCoordinates, "symName") <- "pReceptorCoord"
+attr(ReceptorCoordinates, "ts") <- "X and Y Lambert Coordinates Sources"
+attr(ReceptorCoordinates, "domains") <- c("sFarm", "sCoordinates")
+
 colnames(ImpactScores) <- c("i", "j", "value")
 ImpactScores$i <- as.factor(ImpactScores$i)
 ImpactScores$j <- as.factor(ImpactScores$j)
@@ -138,7 +167,8 @@ attr(BrutoSaldo, "symName") <- "pBrutoSaldo"
 attr(BrutoSaldo, "ts") <- "Bruto Saldo per animal category, AML 2012"
 attr(BrutoSaldo, "domains") <- "ssAnimalCategory"
  
-wgdx.lst("C:/Users/ddpue/Documents/GPBV Flanders/GAMS/GPBV.gdx", FarmCoordinates, ImpactScores, 
+wgdx.lst("C:/Users/ddpue/Documents/GPBV Flanders/GAMS/GPBV.gdx", Deps, IS, FarmCoordinates, 
+         ReceptorCoordinates, ImpactScores, 
          AnimalCategory, FarmAnimals, PermitYear, EmissionFactors, BrutoSaldo)
 
 ssAnimalCategory <- data.frame(c("Broilers", "LayingHens", "AdultCows", "FatteningPigs", "Sows", "Piglets" ))

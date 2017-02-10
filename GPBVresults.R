@@ -266,3 +266,4 @@ Suboptimal <- as.data.frame(cbind(Sources, Suboptimal))
 write.csv(Suboptimal, "Suboptimal.csv")
 dPercentageofMaxProfit <- as.data.frame(cbind(Sources, dPercentageofMaxProfit))
 write.csv(dPercentageofMaxProfit, "PercentageofMaxProfit.csv")
+
