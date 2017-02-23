@@ -121,7 +121,7 @@ ggplot(dat=AllData, aes(x=impact, y=profit, group=scenario, colour=scenario))+
         geom_point(x=1444, y=128691934, shape = 16, colour = "black", size=4)+
         geom_point(x=1444, y=125881648, shape = 17,  colour = "black", size=4)+
         geom_point(x=1444, y=124334589, shape = 18, colour = "black", size=4)+
-        #geom_point(dat=ReferencePoints, aes(x=impact, y=profit))+
+        geom_point(x=1362, y=124661353, shape = 1, colour = "black", size=4)+
         ggtitle("Total Societal Benefit versus Total Impact")+
         geom_hline(aes(yintercept=130405978), colour = "red", lty="dotted", size=1)+
         geom_vline(aes(xintercept=1926), colour = "red", lty="dotted", size=1)+

@@ -93,7 +93,7 @@ colnames(IS) <- c("i", "j", "value")
 IS$i <- as.factor(IS$i)
 IS$j <- as.factor(IS$j)
 attr(IS, "symName") <- "pIS"
-attr(IS, "ts") <- "Indivudal  deposition source x to receptor y"
+attr(IS, "ts") <- "Individual  deposition source x to receptor y"
 attr(IS, "domains") <- c("sFarm", "sReceptor")
 
 
