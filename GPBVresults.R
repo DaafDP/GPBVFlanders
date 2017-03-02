@@ -20,6 +20,7 @@ Scenarios <- c("Reference", "Scenario2", "Scenario3", "Scenario4", "Scenario5", 
 #Sources
 Sources <- read.delim("C:/Users/ddpue/Documents/GPBV Flanders/R/GPBVFlanders/Sources.txt")
 
+
 #NumberofData
 ND <- length(Scenarios) * nrow(Sources)
 
