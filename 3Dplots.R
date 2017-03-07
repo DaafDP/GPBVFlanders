@@ -78,7 +78,7 @@ ggplot(data=AllData[which(AllData$SS %in% SSvector),], aes(x=TIS, y=ImpactRatio,
 
 #Subsetting based on policy goals
 #1.Global Impact should decrease with at least 25% (max impact: 1926)
-SubData <- subset(AllData, TotalImpact<1541)
+SubData <- subset(AllData, isTRUE(all.equal(TotalImpact, 1444.5, tolerance=10000)))
 #2. Private profit should at least be 80% of maximum (max profit:228742849)
 SubData <- subset(SubData, PrivateProfit>182994279)
 #3. Ammonia Emission (and health cost) should decrease with 20% (max emission: 2735622)
