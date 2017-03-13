@@ -24,14 +24,28 @@ ImpactScores <- dcast(ImpactScores, run~impactscore)
 #3Dplot
 cols <- rainbow(150)
 
+scatterplot3d(x=ImpactScores$TIS, y=ImpactScores$SS, z=PrivateProfit$zPrivateProfit)
+plot<-scatterplot3d(x=ImpactScores$TIS, y=ImpactScores$SS, z=TotalImpact$zTotalImpact)
+plot$plane3d(c(0,0,1444))
+
+SS <- c(4, 7, 13)
+TIS <- c(12, 7, 6)
+impact <- rep(1444, 3)
+profit <- PrivateProfit$zPrivateProfit[which(PrivateProfit$run %in% c("r143", "r253", "r491"))]
+
 png('TotalImpact3D.png')
-plot3d(x=ImpactScores$SS, y=ImpactScores$TIS, z=TotalImpact$zTotalImpact)
-wireframe(TotalImpact$zTotalImpact ~ ImpactScores$SS *  ImpactScores$TIS, drape=TRUE, col.regions=cols,
+plot<-plot3d(x=ImpactScores$SS, y=ImpactScores$TIS, z=TotalImpact$zTotalImpact, size=3,
+             xlab="SS", ylab="TIS", zlab= "")
+planes3d(a=0, b=0, c=1, d=-1444, col="grey", alpha=0.4)
+points3d(x=SS, y=TIS, z=impact, col="red", size=15)
+
+cloud(TotalImpact$zTotalImpact ~ ImpactScores$SS *  ImpactScores$TIS, drape=TRUE, col.regions=cols,
           xlab = "SS", ylab="TIS", zlab="Total Impact", scales=list(arrows=FALSE))
 dev.off()
 
 png('PrivateProfit3D.png', width=800, height = 616)
 plot3d(x=ImpactScores$SS, y=ImpactScores$TIS, z=PrivateProfit$zPrivateProfit)
+points3d(x=SS, y=TIS, z=profit, col="red", size=15)
 wireframe(PrivateProfit$zPrivateProfit ~ ImpactScores$SS *  ImpactScores$TIS, drape=TRUE, col.regions=cols,
           xlab = "SS", ylab="TIS", zlab="Private Profit")
 dev.off()
